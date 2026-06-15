@@ -591,16 +591,15 @@ let git=freshGit();      // the repository (carries across isles)
 let started=false, storyOpen=false, panelOpen=false, bossActive=false, resultOpen=false;
 let currentIsle=0, progressRank=0, totalScore=0;
 
-/* save/resume — survives an artifact frame reload. Uses the artifact storage
-   API when present; falls back to in-memory only (never touches localStorage). */
-const SAVE_KEY="gitquest:progress:v1";
-function hasStore(){ return !!(window.storage && typeof window.storage.set==="function"); }
+/* save/resume — persists progress across page refreshes via localStorage. */
+const SAVE_KEY="gitquest:save:v1";
+function hasStore(){ try{ localStorage.setItem("__probe__","1"); localStorage.removeItem("__probe__"); return true; }catch(e){ return false; } }
 function persist(){ if(!hasStore())return;
-  try{ Promise.resolve(window.storage.set(SAVE_KEY, JSON.stringify({isle:currentIsle,rank:progressRank,score:totalScore,git}))).catch(()=>{}); }catch(e){} }
+  try{ localStorage.setItem(SAVE_KEY, JSON.stringify({isle:currentIsle,rank:progressRank,score:totalScore,git})); }catch(e){} }
 async function readSave(){ if(!hasStore())return null;
-  try{ const r=await window.storage.get(SAVE_KEY); return (r&&r.value)?JSON.parse(r.value):null; }catch(e){ return null; } }
+  try{ const raw=localStorage.getItem(SAVE_KEY); return raw?JSON.parse(raw):null; }catch(e){ return null; } }
 function clearSave(){ if(!hasStore())return;
-  try{ Promise.resolve(window.storage.delete(SAVE_KEY)).catch(()=>{}); }catch(e){} }
+  try{ localStorage.removeItem(SAVE_KEY); }catch(e){} }
 
 function canInteract(){ return started && !storyOpen && !panelOpen && !bossActive && !resultOpen; }
 
