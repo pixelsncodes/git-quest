@@ -290,6 +290,7 @@ function runCommand(git,raw){
   if(t[0]==="help"){say("Commands you can use here:","head");
     say('  git init · git status · git add <file> · git commit -m "msg"');
     say("  git log · git branch · git switch -c <name> · git switch <name> · git merge <name>");
+    say("  git restore <file> · git restore --staged <file> · git revert HEAD");
     say("  ls · clear");return{git,lines:out};}
   const g=clone(git);
   if(t[0]==="ls"){const all=[...Object.keys(g.workingFiles),...Object.keys(g.staged)];
@@ -363,6 +364,26 @@ function runCommand(git,raw){
       let cur=tip;const ids=[];while(cur){ids.push(cur);cur=g.commits[cur].parents[0];}
       g.remote.commitIds=Array.from(new Set([...g.remote.commitIds,...ids]));g.remote.branches[g.head]=tip;
       say(`To ${g.remote.url}`);say(` * ${g.head} -> ${g.head}`,"success");break;}
+    case "restore":{
+      if(t[2]==="--staged"){g.lastCmd="restore-staged";const file=t[3];
+        if(!file){say("Usage: git restore --staged <file>","err");break;}
+        if(!g.staged[file]){say(`fatal: '${file}' is not staged — nothing to unstage`,"err");break;}
+        delete g.staged[file];g.workingFiles[file]=true;
+        say(`Unstaged ${file} — changes kept in working directory.`,"success");break;}
+      g.lastCmd="restore";const file=t[2];
+      if(!file){say("Usage: git restore <file>","err");break;}
+      if(!g.workingFiles[file]){say(`fatal: '${file}' — nothing to restore (no uncommitted changes)`,"err");break;}
+      delete g.workingFiles[file];
+      say(`Restored ${file} — discarded local changes.`,"success");break;}
+    case "revert":{g.lastCmd="revert";
+      if(t[2]!=="HEAD"){say("Only 'git revert HEAD' is supported here.","err");break;}
+      const tip=g.branches[g.head];
+      if(!tip){say("fatal: nothing to revert — no commits on this branch","err");break;}
+      const last=g.commits[tip];const id=genHash(g.counter);
+      const msg=`Revert "${last.message}"`;
+      g.commits[id]={id,message:msg,parents:[tip],branch:g.head,order:g.counter,lane:g.lanes[g.head]??0};
+      g.commitOrder.push(id);g.branches[g.head]=id;g.counter++;
+      say(`[${g.head} ${id}] ${msg}`,"success");say("Reverted the last commit — a new commit undoes it.","muted");break;}
     default:say(`git: '${sub}' isn't covered on this isle. Type help.`,"err");
   }
   return{git:g,lines:out};
@@ -475,7 +496,7 @@ const CAMPAIGN = [
     ],
   },
   {
-    numeral:"III", name:"Isle of the Far Shore", rank:"Git Sage", guardian:"The Skywarden",
+    numeral:"III", name:"Isle of the Far Shore", rank:"Remote Rider", guardian:"The Skywarden",
     seed:{ carry:true, files:{ "README.md":true } },
     intro:{ kicker:"Isle III · The Open Sky",
       title:"Give it a home",
@@ -523,8 +544,67 @@ const CAMPAIGN = [
       { q:"In git push -u origin main, the -u…", options:["Undoes the push","Links your local branch to the remote one","Uploads urgently","Makes a new branch"], answer:1, explain:"-u sets the upstream so later you can just type git push." },
     ],
   },
+  {
+    numeral:"IV", name:"Isle of the Lost Step", rank:"Git Sage", guardian:"The Warden of Second Chances",
+    seed:{ carry:true, files:{ "index.html":true }, staged:{ "notes.txt":true } },
+    intro:{ kicker:"Isle IV · The Lost Step",
+      title:"Step back without fear",
+      body:["You tried to patch the world in a hurry and made it worse — an unfinished edit left dangling, the wrong file staged, and a commit that broke the gate.",
+            "Every keeper learns to step back without fear. Three runes: discard the slip, unstage the wrong file, and reverse the bad memory."] },
+    outro:["The world steps back from the brink. Mistakes, you've learned, are never final in Git."],
+    map:[
+      "~~~~~~~~~",
+      "~#G#....~",
+      "~.g.....~",
+      "~.1...2.~",
+      "~...M...~",
+      "~..x3...~",
+      "~...S...~",
+      "~~~~~~~~~",
+    ],
+    stations:[
+      { tile:"1", title:"Discard the slip", cmd:"git restore index.html", hint:"git restore index.html",
+        story:"An unfinished edit drifts in your working tree. Throw it out and start clean.",
+        what:["git restore <file> discards uncommitted changes in your working directory.",
+              "It brings the file back to its last committed state — no staging, no history touched."],
+        objTxt:"Discard the edit: git restore index.html",
+        check:(g)=>g.lastCmd==="restore" && !g.workingFiles.hasOwnProperty("index.html"),
+        reward:"The slip dissolves. The file is clean again." },
+      { tile:"2", title:"Unstage the wrong file", cmd:"git restore --staged notes.txt", hint:"git restore --staged notes.txt",
+        story:"You staged notes.txt by mistake. Pull it back out of staging without losing the edit.",
+        what:["git restore --staged <file> removes a file from the staging area.",
+              "Your local changes are kept — only the staging step is undone."],
+        objTxt:"Unstage the file: git restore --staged notes.txt",
+        check:(g)=>!g.staged.hasOwnProperty("notes.txt"),
+        reward:"The file slips back out of staging, safe in your working tree." },
+      { tile:"3", title:"Reverse the bad memory", cmd:"git revert HEAD", hint:"git revert HEAD",
+        story:"A commit slipped through and broke the gate. Write a new memory that undoes it.",
+        what:["git revert HEAD creates a new commit that undoes the most recent one.",
+              "It never rewrites history — safe to use even on shared branches."],
+        objTxt:"Reverse the commit: git revert HEAD",
+        check:(g,s)=>g.commitOrder.length>s.commits,
+        reward:"A healing commit rises. The gate swings open.", raisesMonument:true },
+    ],
+    quiz:[
+      { q:"What does `git restore <file>` do?",
+        options:["Permanently deletes the file","Discards your uncommitted changes, restoring the file to its last commit","Uploads the file to GitHub","Creates a new branch"],
+        answer:1, explain:"restore throws away uncommitted edits and brings the file back to its last committed state." },
+      { q:"You staged the wrong file with `git add`. How do you unstage it?",
+        options:["git restore --staged <file>","git delete <file>","git commit <file>","git push <file>"],
+        answer:0, explain:"`git restore --staged <file>` removes it from staging without losing your changes (so does `git reset <file>`)." },
+      { q:"Key difference between `git revert` and `git reset`?",
+        options:["They are identical","revert makes a new commit that undoes a change; reset moves the branch pointer and can rewrite history","revert deletes the repo; reset renames it","reset is for remotes only"],
+        answer:1, explain:"revert is safe for shared history because it adds a new commit; reset rewrites history." },
+      { q:"`git revert HEAD` does what?",
+        options:["Deletes the last commit forever","Creates a new commit that undoes the most recent commit","Switches to the main branch","Stages all files"],
+        answer:1, explain:"It records a new commit that reverses the changes of the latest one." },
+      { q:"Which is safest on a branch teammates have already pulled?",
+        options:["git reset --hard","git revert","Deleting the branch","git commit --amend"],
+        answer:1, explain:"revert doesn't rewrite existing history, so it won't disrupt others." },
+    ],
+  },
 ];
-const RANKS = ["Wanderer","Apprentice","Committer","Merge Master","Git Sage"];
+const RANKS = ["Wanderer","Apprentice","Committer","Merge Master","Remote Rider","Git Sage"];
 
 /* ---------------- 3. SCENE SINGLETONS ---------------- */
 const C = { monument:0xf0d090, monumentEdge:0xf6c64e,
@@ -550,6 +630,11 @@ const PALETTES = [
     fog:0x6a5aa0, hemiSky:0xf3d8f0, hemiGround:0x453872, key:0xfbe6f5,
     base:{top:0x6a5aa8, side:0x52458a}, rim:0xab63bf,
     tile:{top:0xead6f0, top2:0xf1e1f6, side:0xddc6e8} },
+  { /* IV — Storm Clearing (slate-violet breaking into warm amber light) */
+    sky:"radial-gradient(125% 100% at 72% 8%, #f0c870 0%, #9a7888 32%, #5e5690 64%, #2a2848 100%)",
+    fog:0x7a7098, hemiSky:0xd8c8a8, hemiGround:0x2e2848, key:0xfff4d0,
+    base:{top:0x5a5480, side:0x403c5e}, rim:0xd07838,
+    tile:{top:0xf0e0c0, top2:0xf7e8cc, side:0xe0cdb0} },
 ];
 const TILE=1;
 const canvas=document.getElementById("scene");
@@ -623,7 +708,8 @@ function loadIsland(idx, resumeGit){
   // git seed (or restore the saved isle-start repo when resuming)
   if(resumeGit){ git=clone(resumeGit); }
   else { if(data.seed.fresh){ git=freshGit(); }
-    git.workingFiles=Object.assign(git.workingFiles||{}, clone(data.seed.files||{})); }
+    git.workingFiles=Object.assign(git.workingFiles||{}, clone(data.seed.files||{}));
+    if(data.seed.staged) git.staged=Object.assign(git.staged||{}, clone(data.seed.staged)); }
 
   const ROWS=data.map.length, COLS=data.map[0].length;
   const offX=-((COLS-1)*TILE)/2, offZ=-((ROWS-1)*TILE)/2;

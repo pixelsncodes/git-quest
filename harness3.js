@@ -35,6 +35,12 @@ const ISLE_CMDS = [
     ['git add README.md', 'git commit -m "Add README"'],
     ['git push -u origin main'],
   ],
+  // Isle IV  (3 stations)
+  [
+    ['git restore index.html'],
+    ['git restore --staged notes.txt'],
+    ['git revert HEAD'],
+  ],
 ];
 
 // ── BOOT + EXPORT ─────────────────────────────────────────────────────────────
@@ -84,8 +90,8 @@ function pass(msg) { console.log('PASS:', msg); }
 function fail(msg) { console.log('FAIL:', msg); failed = true; }
 
 // 1. CAMPAIGN sanity
-if (Array.isArray(CAMPAIGN) && CAMPAIGN.length === 3) {
-  pass('CAMPAIGN has 3 islands');
+if (Array.isArray(CAMPAIGN) && CAMPAIGN.length === 4) {
+  pass('CAMPAIGN has 4 islands');
 } else {
   fail(`CAMPAIGN length is ${Array.isArray(CAMPAIGN) ? CAMPAIGN.length : typeof CAMPAIGN}`);
 }
@@ -114,7 +120,7 @@ if (Array.isArray(CAMPAIGN) && CAMPAIGN.length === 3) {
 }
 
 // ── Campaign helpers ───────────────────────────────────────────────────────────
-const NUMERALS = ['I', 'II', 'III'];
+const NUMERALS = ['I', 'II', 'III', 'IV'];
 
 function playStations(i) {
   console.log(`\n── Isle ${NUMERALS[i]} stations ──`);
@@ -181,6 +187,17 @@ else                        fail(`currentIsle is ${getCurrentIsle()}, expected 2
 playStations(2);
 playBoss(2);
 
+// Transition III → IV
+console.log('\n── transition III → IV ──');
+getResultAction()();          // loadIsland(3)
+setStoryOpen(false); setStarted(true);
+if (getCurrentIsle() === 3) pass('currentIsle → 3 (Isle IV)');
+else                        fail(`currentIsle is ${getCurrentIsle()}, expected 3`);
+
+// Isle IV
+playStations(3);
+playBoss(3);
+
 // Victory
 console.log('\n── victory ──');
 if (getResultOpen())                              pass('result screen open after final boss');
@@ -188,7 +205,7 @@ else                                              fail('result screen NOT open a
 const ctaText = global.document.getElementById('resCta').textContent;
 if (ctaText === 'Set sail again ▸')          pass('victory CTA: "Set sail again ▸"');
 else                                              fail(`victory CTA: "${ctaText}"`);
-if (getCurrentIsle() === 2)                       pass('currentIsle is 2 (final, pre-restart)');
-else                                              fail(`currentIsle is ${getCurrentIsle()}, expected 2`);
+if (getCurrentIsle() === 3)                       pass('currentIsle is 3 (final, pre-restart)');
+else                                              fail(`currentIsle is ${getCurrentIsle()}, expected 3`);
 
 process.exit(failed ? 1 : 0);
