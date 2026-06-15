@@ -1,20 +1,1067 @@
 <!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-    <meta name="theme-color" content="#2a2140" />
-    <title>Git Quest — an isometric adventure for learning Git</title>
-    <meta name="description" content="Climb impossible islands, master Git, and beat the boss by answering flashcards before the timer runs out." />
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Outfit:wght@400;500;600&family=Space+Mono:wght@400;700&display=swap"
-      rel="stylesheet"
-    />
-  </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.jsx"></script>
-  </body>
-</html>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+<title>Git Quest — The Unmade Repository</title>
+<style>
+  :root{
+    --peach:#f6c9a4; --periwinkle:#9b8fc9; --sand:#e7b58a; --sand-2:#d99a6c;
+    --terracotta:#d9694a; --teal:#4fa89b; --plum:#4a3b63; --gold:#f2c14e;
+    --ink:#2c2440; --cream:#fbf3e7;
+    --mono:'SFMono-Regular',ui-monospace,'JetBrains Mono',Menlo,Consolas,monospace;
+    --disp:'Fraunces','Iowan Old Style',Georgia,serif;
+    --body:-apple-system,BlinkMacSystemFont,'Segoe UI',Inter,system-ui,sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%;overflow:hidden;background:#7c72ab}
+  body{font-family:var(--body);color:var(--cream);-webkit-font-smoothing:antialiased;touch-action:manipulation}
+
+  #sky{position:fixed;inset:0;z-index:0;background:
+      radial-gradient(125% 100% at 78% 6%, #f7b48f 0%, #ee9090 30%, #c074a0 62%, #6f5ca0 100%);
+      transition:background .8s ease}
+  #sky::after{content:"";position:absolute;inset:0;mix-blend-mode:screen;opacity:.5;
+      background:radial-gradient(55% 40% at 80% 16%, rgba(255,247,233,.5), transparent 62%)}
+  #scene{position:fixed;inset:0;z-index:1;display:block}
+
+  /* HUD */
+  #hud{position:fixed;inset:0;z-index:5;pointer-events:none;display:flex;flex-direction:column;justify-content:space-between}
+  .hud-top{display:flex;justify-content:space-between;align-items:flex-start;padding:18px 20px;gap:12px}
+  .crest .eyebrow{font-family:var(--mono);font-size:.64rem;letter-spacing:.22em;text-transform:uppercase;
+      color:rgba(251,243,231,.74);text-shadow:0 1px 6px rgba(44,36,64,.5)}
+  .crest h1{font-family:var(--disp);font-weight:600;font-size:1.3rem;letter-spacing:-.01em;line-height:1.05;margin-top:3px;
+      text-shadow:0 2px 10px rgba(44,36,64,.55)}
+  .rank{text-align:right;background:rgba(44,36,64,.34);backdrop-filter:blur(7px);border:1px solid rgba(251,243,231,.18);
+      border-radius:13px;padding:9px 14px}
+  .rank .k{font-family:var(--mono);font-size:.58rem;letter-spacing:.18em;text-transform:uppercase;color:rgba(251,243,231,.7)}
+  .rank .v{font-family:var(--disp);font-weight:600;font-size:1rem;margin-top:1px}
+  .runes{display:flex;gap:6px;margin-top:8px;justify-content:flex-end}
+  .runedot{width:9px;height:9px;border-radius:3px;background:rgba(251,243,231,.18);border:1px solid rgba(251,243,231,.25)}
+  .runedot.done{background:var(--gold);border-color:var(--gold)}
+  .runedot.active{background:var(--terracotta);border-color:var(--terracotta);box-shadow:0 0 0 3px rgba(217,105,74,.25)}
+
+  .hud-foot{padding:0 18px 18px;display:flex;justify-content:center}
+  .pill{pointer-events:none;display:inline-flex;align-items:center;gap:9px;background:rgba(44,36,64,.42);
+      backdrop-filter:blur(8px);border:1px solid rgba(251,243,231,.16);border-radius:30px;padding:10px 18px;font-size:.9rem;
+      color:var(--cream);max-width:92vw;text-align:center;box-shadow:0 14px 36px -18px rgba(20,14,34,.9);transition:opacity .4s}
+  .pill .dotpulse{width:8px;height:8px;border-radius:50%;background:var(--gold);animation:ping 1.8s infinite}
+  @keyframes ping{0%{box-shadow:0 0 0 0 rgba(242,193,78,.55)}70%{box-shadow:0 0 0 9px rgba(242,193,78,0)}100%{box-shadow:0 0 0 0 rgba(242,193,78,0)}}
+
+  /* generic overlay (title + story + result) */
+  .veil{position:fixed;inset:0;z-index:30;display:flex;flex-direction:column;align-items:center;justify-content:center;
+      text-align:center;padding:26px;background:radial-gradient(80% 60% at 50% 40%, rgba(44,36,64,.22), rgba(28,18,46,.62));
+      backdrop-filter:blur(3px);transition:opacity .6s}
+  .veil.hide{opacity:0;pointer-events:none;visibility:hidden;transition:opacity .6s,visibility 0s linear .6s}
+  .veil.hide *{pointer-events:none!important}
+  .kicker{font-family:var(--mono);font-size:.7rem;letter-spacing:.3em;text-transform:uppercase;color:rgba(251,243,231,.8)}
+  .veil h2{font-family:var(--disp);font-weight:600;letter-spacing:-.025em;line-height:1;margin-top:13px;
+      font-size:clamp(2rem,8vw,3.6rem);text-shadow:0 6px 30px rgba(28,18,46,.6)}
+  .veil h2 em{font-style:italic;color:var(--gold)}
+  .veil .body{max-width:42ch;margin:20px auto 0}
+  .veil .body p{color:rgba(251,243,231,.88);font-size:1.04rem;line-height:1.62;margin-top:11px}
+  .cta{pointer-events:auto;margin-top:30px;font-family:var(--disp);font-weight:600;font-size:1.04rem;color:var(--ink);
+      background:linear-gradient(135deg,var(--gold),#f0a94e);border:none;border-radius:14px;padding:15px 30px;cursor:pointer;
+      box-shadow:0 18px 40px -16px rgba(242,193,78,.9);transition:transform .16s,box-shadow .16s}
+  .cta:hover{transform:translateY(-2px);box-shadow:0 24px 50px -18px rgba(242,193,78,1)}
+  .cta.ghost{background:rgba(251,243,231,.08);border:1px solid rgba(251,243,231,.22);color:var(--cream);box-shadow:none}
+  .legend{margin-top:26px;display:flex;gap:18px;flex-wrap:wrap;justify-content:center;font-family:var(--mono);font-size:.72rem;color:rgba(251,243,231,.78)}
+  .legend span{display:inline-flex;align-items:center;gap:7px}
+  .legend i{width:11px;height:11px;border-radius:3px;display:inline-block}
+
+  /* result extras */
+  .medal{width:80px;height:80px;border-radius:24px;display:grid;place-items:center;margin-bottom:18px;
+      background:linear-gradient(135deg,var(--gold),var(--terracotta));color:#2c2440;box-shadow:0 22px 54px -22px rgba(242,193,78,.9)}
+  .recap{display:flex;gap:9px;flex-wrap:wrap;justify-content:center;margin:20px 0 4px}
+  .chip{font-family:var(--mono);font-size:.74rem;color:#9fe0b3;background:rgba(127,217,154,.12);
+      border:1px solid rgba(127,217,154,.32);border-radius:20px;padding:7px 12px}
+  .chip.gold{color:var(--gold);background:rgba(242,193,78,.12);border-color:rgba(242,193,78,.34)}
+
+  /* station panel (teach -> console) */
+  #panel{position:fixed;z-index:20;left:50%;bottom:0;transform:translate(-50%,112%);width:min(640px,95vw);
+      background:rgba(20,16,32,.93);backdrop-filter:blur(14px);border:1px solid rgba(251,243,231,.14);border-bottom:none;
+      border-radius:18px 18px 0 0;box-shadow:0 -24px 70px -24px rgba(10,6,22,.95);transition:transform .42s cubic-bezier(.3,1,.4,1);overflow:hidden}
+  #panel.open{transform:translate(-50%,0)}
+  .p-head{display:flex;align-items:center;gap:10px;padding:13px 16px;border-bottom:1px solid rgba(251,243,231,.1)}
+  .p-head .glyph{width:28px;height:28px;border-radius:9px;display:grid;place-items:center;
+      background:linear-gradient(135deg,var(--terracotta),#b8492f);color:#fff;font-family:var(--mono);font-size:.82rem;font-weight:700}
+  .p-head .ptitle{font-family:var(--disp);font-weight:600;font-size:1.04rem}
+  .p-head .psub{font-family:var(--mono);font-size:.64rem;color:rgba(251,243,231,.55);letter-spacing:.05em;margin-top:1px}
+  .p-head .x{margin-left:auto;width:30px;height:30px;border-radius:9px;border:1px solid rgba(251,243,231,.16);
+      background:rgba(251,243,231,.05);color:rgba(251,243,231,.7);cursor:pointer;font-size:1.1rem;line-height:1}
+  .p-head .x:hover{color:#fff;border-color:rgba(251,243,231,.4)}
+
+  .p-teach{padding:16px 18px 20px;display:none}
+  #panel.mode-teach .p-teach{display:block}
+  .p-teach .story{font-family:var(--disp);font-style:italic;font-size:1.04rem;line-height:1.5;color:#efe6d6}
+  .p-teach .whatlbl{font-family:var(--mono);font-size:.62rem;letter-spacing:.18em;text-transform:uppercase;color:var(--teal);margin:18px 0 8px}
+  .p-teach .what p{font-size:.92rem;line-height:1.6;color:rgba(251,243,231,.82);margin-bottom:7px}
+  .cmdchip{display:inline-flex;align-items:center;gap:8px;margin-top:14px;font-family:var(--mono);font-size:.86rem;color:var(--gold);
+      background:rgba(242,193,78,.1);border:1px dashed rgba(242,193,78,.42);border-radius:10px;padding:9px 13px}
+  .cmdchip .lbl{font-size:.6rem;letter-spacing:.14em;text-transform:uppercase;color:rgba(242,193,78,.7)}
+  .go{margin-top:18px;font-family:var(--disp);font-weight:600;font-size:.96rem;color:var(--ink);
+      background:linear-gradient(135deg,var(--gold),#f0a94e);border:none;border-radius:12px;padding:12px 20px;cursor:pointer}
+  .go:hover{filter:brightness(1.04)}
+
+  .p-console{display:none;padding:12px 14px 16px}
+  #panel.mode-console .p-console{display:block}
+  .scroll{height:178px;overflow-y:auto;font-family:var(--mono);font-size:.79rem;line-height:1.5;padding-right:4px}
+  .scroll::-webkit-scrollbar{width:7px}.scroll::-webkit-scrollbar-thumb{background:rgba(251,243,231,.16);border-radius:4px}
+  .tline{white-space:pre-wrap;word-break:break-word}
+  .tline.cmd{color:#fbf3e7}.tline.cmd::before{content:"❯ ";color:var(--gold)}
+  .tline.out{color:#cdd5e1}.tline.muted{color:#7d8497}.tline.success{color:#7fd99a}
+  .tline.err{color:#f0846a}.tline.cyan{color:#67c7c2}.tline.amber{color:var(--gold)}
+  .tline.coral{color:#f0a07a}.tline.head{color:var(--terracotta)}
+  .inrow{display:flex;align-items:center;gap:8px;margin-top:8px;border-top:1px solid rgba(251,243,231,.08);padding-top:9px}
+  .inrow .ps{font-family:var(--mono);color:var(--gold);font-size:.82rem}
+  .inrow input{flex:1;background:none;border:none;outline:none;color:#fbf3e7;font-family:var(--mono);font-size:.82rem;caret-color:var(--gold)}
+  .inrow input::placeholder{color:#5b6173}
+  .objbox{margin-top:11px;display:flex;gap:10px;align-items:flex-start;font-size:.84rem;color:#fbf3e7}
+  .objbox .box{flex:none;width:20px;height:20px;border-radius:6px;display:grid;place-items:center;font-family:var(--mono);font-size:.66rem;
+      background:rgba(251,243,231,.06);border:1px solid var(--gold);color:var(--gold);margin-top:1px}
+  .objbox.ok .box{background:rgba(127,217,154,.16);border-color:rgba(127,217,154,.5);color:#7fd99a}
+  .objbox .hint{display:block;margin-top:5px;font-family:var(--mono);font-size:.72rem;color:var(--gold);
+      background:rgba(242,193,78,.08);border:1px dashed rgba(242,193,78,.4);border-radius:7px;padding:5px 8px;cursor:pointer}
+  .sealed{display:none;margin-top:13px;border-top:1px solid rgba(251,243,231,.1);padding-top:13px}
+  .sealed.show{display:block}
+  .sealed-in{font-family:var(--disp);font-size:1rem;color:#7fd99a}
+  .sealed-in .em{color:var(--gold)}
+
+  /* boss */
+  #boss{position:fixed;inset:0;z-index:40;display:none;flex-direction:column;align-items:center;justify-content:center;padding:20px;
+      background:radial-gradient(90% 70% at 50% 38%, rgba(74,59,99,.6), rgba(20,12,34,.86));backdrop-filter:blur(5px)}
+  .boss-top{width:min(560px,94vw);display:flex;align-items:center;justify-content:space-between;gap:14px;margin-bottom:14px}
+  .gstat{flex:1}
+  .gstat .gn{font-family:var(--disp);font-weight:600;font-size:1.04rem}
+  .hpbar{height:9px;border-radius:6px;background:rgba(251,243,231,.12);margin-top:7px;overflow:hidden}
+  .hpfill{height:100%;width:100%;border-radius:6px;background:linear-gradient(90deg,var(--teal),#7fd0c6);transition:width .45s cubic-bezier(.3,1,.4,1)}
+  .hearts{display:flex;gap:5px}
+  .heart{width:18px;height:18px;color:var(--terracotta);transition:opacity .3s,transform .3s}
+  .heart.gone{opacity:.18;transform:scale(.7)}
+  .timer{position:relative;width:50px;height:50px;flex:none}
+  .timer svg{transform:rotate(-90deg)}
+  .timer .num{position:absolute;inset:0;display:grid;place-items:center;font-family:var(--mono);font-size:.92rem;color:#fbf3e7}
+  .qcard{width:min(560px,94vw);background:rgba(251,243,231,.97);color:var(--ink);border-radius:20px;padding:24px 22px;
+      box-shadow:0 30px 80px -30px rgba(12,6,26,.95);min-height:300px;display:flex;flex-direction:column}
+  .qcard .tag{font-family:var(--mono);font-size:.66rem;letter-spacing:.16em;text-transform:uppercase;color:#8a7fb5}
+  .qcard .q{font-family:var(--disp);font-weight:600;font-size:1.26rem;line-height:1.28;margin:11px 0 18px}
+  .opts{display:flex;flex-direction:column;gap:9px}
+  .opt{display:flex;align-items:center;gap:12px;text-align:left;background:#fff;border:1.5px solid #e6ddcf;color:var(--ink);
+      font-family:var(--body);font-size:.96rem;padding:13px 14px;border-radius:12px;cursor:pointer;transition:.13s}
+  .opt:hover{border-color:var(--terracotta);transform:translateX(3px)}
+  .opt .k{flex:none;width:24px;height:24px;border-radius:7px;display:grid;place-items:center;font-family:var(--mono);font-weight:700;font-size:.76rem;background:#f1e9da;color:#8a7fb5}
+  .opt.right{border-color:#5bbf7e;background:#edfaef}.opt.right .k{background:#5bbf7e;color:#fff}
+  .opt.wrong{border-color:#e07a5f;background:#fdeee9}.opt.wrong .k{background:#e07a5f;color:#fff}
+  .verdict{margin-top:auto;padding-top:14px;display:flex;align-items:flex-start;gap:10px;font-family:var(--disp);font-weight:600;font-size:1.04rem}
+  .verdict.good{color:#3f9d5f}.verdict.bad{color:#cf5a3c}
+  .explain{display:block;font-family:var(--body);font-weight:400;font-size:.9rem;color:#6a6080;margin-top:5px}
+  .combo{display:inline-flex;align-items:center;gap:5px;font-family:var(--mono);font-size:.72rem;color:#b8893f;background:rgba(242,193,78,.18);padding:4px 9px;border-radius:20px}
+
+  /* toast */
+  #toast{position:fixed;left:50%;top:84px;transform:translate(-50%,-16px);z-index:25;opacity:0;pointer-events:none;
+      background:rgba(20,16,32,.9);backdrop-filter:blur(8px);border:1px solid rgba(251,243,231,.16);border-radius:30px;
+      padding:11px 20px;font-size:.9rem;color:var(--cream);box-shadow:0 16px 40px -18px rgba(10,6,22,.9);
+      transition:opacity .35s,transform .35s;display:inline-flex;align-items:center;gap:9px;max-width:90vw}
+  #toast.show{opacity:1;transform:translate(-50%,0)}
+  #toast .em{color:var(--gold)}
+
+  @media(prefers-reduced-motion:reduce){*{animation-duration:.001ms!important;transition-duration:.08s!important}}
+</style>
+
+<div id="sky"></div>
+<canvas id="scene"></canvas>
+
+<div id="hud">
+  <div class="hud-top">
+    <div class="crest">
+      <div class="eyebrow" id="hudIsle">Git Quest · Isle I</div>
+      <h1 id="hudName">The Unmade Repository</h1>
+    </div>
+    <div class="rank">
+      <div class="k">Rank</div>
+      <div class="v" id="rankVal">Wanderer</div>
+      <div class="runes" id="runeDots"></div>
+    </div>
+  </div>
+  <div class="hud-foot">
+    <div class="pill" id="pill"><span class="dotpulse"></span><span id="pillTxt">Walk to the glowing rune.</span></div>
+  </div>
+</div>
+
+<!-- station panel -->
+<div id="panel">
+  <div class="p-head">
+    <div class="glyph" id="pNum">1</div>
+    <div><div class="ptitle" id="pTitle">Station</div><div class="psub" id="pSub">~/world</div></div>
+    <button class="x" id="pClose" aria-label="Step away">×</button>
+  </div>
+  <div class="p-teach">
+    <div class="story" id="pStory"></div>
+    <div class="whatlbl">What this does</div>
+    <div class="what" id="pWhat"></div>
+    <div class="cmdchip"><span class="lbl">type</span><span id="pCmd"></span></div>
+    <button class="go" id="pGo">Step to the console ▸</button>
+  </div>
+  <div class="p-console">
+    <div class="scroll" id="pScroll"></div>
+    <div class="inrow"><span class="ps">❯</span>
+      <input id="pInput" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="type the command…  (type help anytime)" /></div>
+    <div class="objbox" id="pObj"><span class="box">!</span><span class="txt" id="pObjTxt"></span></div>
+    <div class="sealed" id="pSealed">
+      <div class="sealed-in"><span class="em">✦</span> <span id="pReward"></span></div>
+      <button class="go" id="pOnward">Onward ▸</button>
+    </div>
+  </div>
+</div>
+
+<!-- boss -->
+<div id="boss">
+  <div class="boss-top">
+    <div class="gstat">
+      <div class="gn" id="gName">The Guardian</div>
+      <div class="hpbar"><div class="hpfill" id="hpFill"></div></div>
+    </div>
+    <div class="hearts" id="hearts"></div>
+    <div class="timer">
+      <svg width="50" height="50"><circle cx="25" cy="25" r="21" fill="none" stroke="rgba(251,243,231,.16)" stroke-width="5"/>
+      <circle id="timerArc" cx="25" cy="25" r="21" fill="none" stroke="#f2c14e" stroke-width="5" stroke-linecap="round"/></svg>
+      <div class="num" id="timerNum">12</div>
+    </div>
+  </div>
+  <div class="qcard" id="qcard"></div>
+</div>
+
+<!-- result / outro -->
+<div id="result" class="veil hide">
+  <div class="medal"><svg width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></svg></div>
+  <div class="kicker" id="resKicker">Isle cleared</div>
+  <h2 id="resTitle">The guardian rests.</h2>
+  <div class="body"><p id="resSub"></p></div>
+  <div class="recap" id="resRecap"></div>
+  <button class="cta" id="resCta">Sail onward ▸</button>
+</div>
+
+<!-- story intro -->
+<div id="story" class="veil hide">
+  <div class="kicker" id="stKicker">Isle I</div>
+  <h2 id="stTitle"></h2>
+  <div class="body" id="stBody"></div>
+  <button class="cta" id="stCta">Step ashore</button>
+</div>
+
+<!-- title -->
+<div id="title" class="veil">
+  <div class="kicker">An adventure in version control</div>
+  <h2>Git&nbsp;<em>Quest</em></h2>
+  <div class="body"><p>The Repository — a whole world held in saved memory — came undone in a storm. You are its Keeper. Sail the dusk isles and rebuild its history, one command at a time.</p></div>
+  <div style="display:flex;gap:11px;flex-wrap:wrap;justify-content:center">
+    <button class="cta" id="continueBtn" style="display:none">Continue</button>
+    <button class="cta" id="startBtn">Begin the restoration</button>
+  </div>
+  <div class="legend">
+    <span><i style="background:var(--terracotta)"></i> Rune — learn, then type</span>
+    <span><i style="background:var(--gold)"></i> Monument — your commits</span>
+    <span><i style="background:var(--teal)"></i> Guardian — the trial</span>
+  </div>
+</div>
+
+<div id="toast"><span class="em">✦</span><span id="toastTxt"></span></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+/* ============================================================
+   GIT QUEST — story-driven, multi-station, multi-level
+   Engine + quiz content ported from the original 2D Git Quest.
+   ============================================================ */
+const clone = (o)=> (window.structuredClone ? structuredClone(o) : JSON.parse(JSON.stringify(o)));
+const L = (text,type="out")=>({text,type});
+function mix(a,b,t){ const ar=(a>>16)&255,ag=(a>>8)&255,ab=a&255,br=(b>>16)&255,bg=(b>>8)&255,bb=b&255;
+  const r=Math.round(ar+(br-ar)*t),g=Math.round(ag+(bg-ag)*t),bl=Math.round(ab+(bb-ab)*t); return (r<<16)|(g<<8)|bl; }
+
+/* ---------------- 1. GIT ENGINE (ported, full) ---------------- */
+function genHash(n){const x=((n+1)*2654435761)%2147483647;return (x>>>0).toString(16).padStart(7,"0").slice(0,7);}
+function freshGit(){return{initialized:false,workingFiles:{},staged:{},commits:{},commitOrder:[],
+  branches:{main:null},lanes:{main:0},head:"main",counter:0,remote:null,lastCmd:""};}
+function tokenize(input){const re=/"([^"]*)"|'([^']*)'|(\S+)/g;const out=[];let m;
+  while((m=re.exec(input)))out.push(m[1]??m[2]??m[3]);return out;}
+function assignLane(g,name){if(g.lanes[name]==null)g.lanes[name]=Object.keys(g.lanes).length;}
+function runCommand(git,raw){
+  const input=(raw||"").trim();const t=tokenize(input);const out=[];
+  const say=(text,type="out")=>out.push({text,type});
+  if(t.length===0)return{git,lines:[]};
+  if(t[0]==="clear")return{git,lines:[{__clear:true}]};
+  if(t[0]==="help"){say("Commands you can use here:","head");
+    say('  git init · git status · git add <file> · git commit -m "msg"');
+    say("  git log · git branch · git switch -c <name> · git switch <name> · git merge <name>");
+    say("  ls · clear");return{git,lines:out};}
+  const g=clone(git);
+  if(t[0]==="ls"){const all=[...Object.keys(g.workingFiles),...Object.keys(g.staged)];
+    say(all.length?all.join("   "):"(empty project)");return{git:g,lines:out};}
+  if(t[0]!=="git"){say(`command not found: ${t[0]}`,"err");
+    say('This is a git practice rune — start commands with "git".',"muted");return{git,lines:out};}
+  const sub=t[1];
+  if(sub==="--version"||sub==="version"){say("git version 2.43.0");g.lastCmd="version";return{git:g,lines:out};}
+  if(sub==="init"){
+    if(g.initialized)say("Reinitialized existing Git repository in /world/.git/");
+    else{g.initialized=true;say("Initialized empty Git repository in /world/.git/","success");say("Git is now watching this folder.","muted");}
+    g.lastCmd="init";return{git:g,lines:out};}
+  if(!g.initialized){say("fatal: not a git repository","err");say('Run "git init" first to create one.',"muted");return{git,lines:out};}
+  switch(sub){
+    case "status":{g.lastCmd="status";say(`On branch ${g.head}`,"cyan");
+      if(g.branches[g.head]==null)say("No commits yet","muted");
+      const st=Object.keys(g.staged),un=Object.keys(g.workingFiles);
+      if(st.length){say("Changes to be committed:","success");st.forEach(f=>say("    new file:   "+f,"success"));}
+      if(un.length){say("Untracked files:","coral");un.forEach(f=>say("    "+f,"coral"));say('  (use "git add <file>" to stage them)',"muted");}
+      if(!st.length&&!un.length)say("nothing to commit, working tree clean","muted");return{git:g,lines:out};}
+    case "add":{g.lastCmd="add";const target=t[2];
+      if(!target){say("Nothing specified. Try: git add . (to stage everything)","err");break;}
+      if(target==="."||target==="-A"){const names=Object.keys(g.workingFiles);
+        if(!names.length)say("Nothing to add — working tree is clean.","muted");
+        else{names.forEach(n=>{g.staged[n]=true;delete g.workingFiles[n];});say(`Staged ${names.length} file(s): ${names.join(", ")}`,"success");}
+      }else if(g.staged[target]){say(`${target} is already staged.`,"muted");}
+      else if(g.workingFiles[target]){g.staged[target]=true;delete g.workingFiles[target];say(`Staged ${target}`,"success");}
+      else{say(`fatal: pathspec '${target}' did not match any files`,"err");say("Tip: type ls to see your files.","muted");}break;}
+    case "commit":{g.lastCmd="commit";const mi=t.indexOf("-m");const msg=mi>=0?t[mi+1]:null;
+      if(Object.keys(g.staged).length===0){say("nothing to commit — stage files first with git add","err");break;}
+      if(!msg){say('Please add a message: git commit -m "what you changed"',"err");break;}
+      const id=genHash(g.counter);const parentTip=g.branches[g.head];
+      g.commits[id]={id,message:msg,parents:parentTip?[parentTip]:[],branch:g.head,order:g.counter,lane:g.lanes[g.head]??0};
+      g.commitOrder.push(id);const n=Object.keys(g.staged).length;g.branches[g.head]=id;g.counter++;g.staged={};
+      say(`[${g.head} ${id}] ${msg}`,"success");say(` ${n} file(s) committed — snapshot saved.`,"muted");break;}
+    case "log":{g.lastCmd="log";
+      if(g.commitOrder.length===0){say("fatal: your current branch does not have any commits yet","err");break;}
+      const oneline=t.includes("--oneline");let cur=g.branches[g.head];const chain=[];
+      while(cur){const c=g.commits[cur];chain.push(c);cur=c.parents[0];}
+      chain.forEach((c,i)=>{if(oneline)say(`${c.id} ${c.message}`,"amber");
+        else{say(`commit ${c.id}`+(i===0?`  (HEAD -> ${g.head})`:""),"amber");say(`    ${c.message}`);if(i<chain.length-1)say("");}});break;}
+    case "branch":{g.lastCmd="branch";const name=t[2];
+      if(!name){Object.keys(g.branches).forEach(b=>say((b===g.head?"* ":"  ")+b,b===g.head?"success":"out"));}
+      else if(Object.prototype.hasOwnProperty.call(g.branches,name)){say(`fatal: a branch named '${name}' already exists`,"err");}
+      else{g.branches[name]=g.branches[g.head];assignLane(g,name);say(`Created branch ${name} (you are still on ${g.head})`,"success");}break;}
+    case "switch":case "checkout":{g.lastCmd="switch";let name,create=false;const flag=sub==="switch"?"-c":"-b";
+      if(t[2]===flag){create=true;name=t[3];}else name=t[2];
+      if(!name){say("Please name a branch, e.g. git switch -c feature","err");break;}
+      if(create){if(Object.prototype.hasOwnProperty.call(g.branches,name)){say(`fatal: a branch named '${name}' already exists`,"err");break;}
+        g.branches[name]=g.branches[g.head];assignLane(g,name);g.head=name;
+        say(`Switched to a new branch '${name}'`,"success");say("New commits now go here, leaving the old line untouched.","muted");}
+      else{if(!Object.prototype.hasOwnProperty.call(g.branches,name)){say(`error: no branch named '${name}'`,"err");break;}
+        g.head=name;say(`Switched to branch '${name}'`,"success");}break;}
+    case "merge":{g.lastCmd="merge";const other=t[2];
+      if(!other||!Object.prototype.hasOwnProperty.call(g.branches,other)){say(`merge: '${other}' — not something we can merge`,"err");break;}
+      if(other===g.head){say("Already up to date.","muted");break;}
+      const targetTip=g.branches[g.head],sourceTip=g.branches[other];
+      if(sourceTip===targetTip||sourceTip==null){say("Already up to date.","muted");break;}
+      const id=genHash(g.counter);
+      g.commits[id]={id,message:`Merge branch '${other}' into ${g.head}`,parents:[targetTip,sourceTip].filter(Boolean),
+        branch:g.head,order:g.counter,lane:g.lanes[g.head]??0,merge:true};
+      g.commitOrder.push(id);g.branches[g.head]=id;g.counter++;
+      say(`Merging ${other} into ${g.head}...`);say("Merge made — the two timelines are now one.","success");break;}
+    case "remote":{g.lastCmd="remote";
+      if(t[2]==="add"&&t[3]==="origin"&&t[4]){g.remote={url:t[4],commitIds:[],branches:{}};
+        say(`Remote "origin" added → ${t[4]}`,"success");say("origin is a nickname for your online copy.","muted");}
+      else if(t[2]==="-v"||!t[2]){if(g.remote)say(`origin  ${g.remote.url} (fetch & push)`,"cyan");else say("(no remotes yet)","muted");}
+      else say("usage: git remote add origin <url>","err");break;}
+    case "push":{g.lastCmd="push";if(!g.remote){say("fatal: no remote configured.","err");break;}
+      const tip=g.branches[g.head];if(tip==null){say("Everything up-to-date.","muted");break;}
+      let cur=tip;const ids=[];while(cur){ids.push(cur);cur=g.commits[cur].parents[0];}
+      g.remote.commitIds=Array.from(new Set([...g.remote.commitIds,...ids]));g.remote.branches[g.head]=tip;
+      say(`To ${g.remote.url}`);say(` * ${g.head} -> ${g.head}`,"success");break;}
+    default:say(`git: '${sub}' isn't covered on this isle. Type help.`,"err");
+  }
+  return{git:g,lines:out};
+}
+
+/* ---------------- 2. CAMPAIGN (story + stations + boss) ---------------- */
+const CAMPAIGN = [
+  {
+    numeral:"I", name:"Isle of First Light", rank:"Committer", guardian:"The Crystal Sentinel",
+    seed:{ fresh:true, files:{ "index.html":true } },
+    intro:{ kicker:"Isle I · The Forgotten Ground",
+      title:"Nothing remembers",
+      body:["You step ashore and the ground is blank — not even its own past is recorded. A single file, index.html, drifts at your feet.",
+            "Wake the ground, gather the fragment, and seal the first memory. Three runes. Learn each, then perform it."] },
+    outro:["The first memory holds. The ground knows itself again — and somewhere east, a second isle surfaces from the tide."],
+    map:[
+      "~~~~~~~~~",
+      "~#G#....~",
+      "~.g..1..~",
+      "~....M..~",
+      "~.2.....~",
+      "~..x..3.~",
+      "~...S...~",
+      "~~~~~~~~~",
+    ],
+    stations:[
+      { tile:"1", title:"Wake the ground", cmd:"git init", hint:"git init",
+        story:"The folder is just a folder. Give it memory.",
+        what:["A repository is a project folder that Git is watching.",
+              "git init creates a hidden .git store — Git starts recording this folder's history from now on."],
+        objTxt:"Wake the repository with git init",
+        check:(g)=>g.initialized,
+        reward:"The ground hums awake. Git is watching now." },
+      { tile:"2", title:"Gather the fragment", cmd:"git add index.html", hint:"git add index.html",
+        story:"Saving is two motions. First, choose what to keep.",
+        what:["git add moves a file into the staging area — a holding zone for the next snapshot.",
+              "Think of it as packing the fragment into a box before you seal it."],
+        objTxt:"Stage index.html with git add",
+        check:(g)=>Object.keys(g.staged).length>0 || g.lastCmd==="add",
+        reward:"The fragment rises into the staging light." },
+      { tile:"3", title:"Seal the memory", cmd:'git commit -m "Add homepage"', hint:'git commit -m "Add homepage"',
+        story:"Now seal the box and write its label.",
+        what:["git commit records the staged changes as a permanent snapshot, with a message describing it.",
+              "Every commit is a save point you can return to — the first stone of your monument."],
+        objTxt:'Seal a snapshot: git commit -m "..."',
+        check:(g,s)=>g.commitOrder.length>s.commits,
+        reward:"A keystone memory rises on the monument.", raisesMonument:true },
+    ],
+    quiz:[
+      { q:"What does git add do?", options:["Permanently saves a snapshot","Stages changes so they're ready to commit","Uploads to a server","Creates a branch"], answer:1, explain:"add moves changes into the staging area — the box you're packing." },
+      { q:"What does git commit do?", options:["Stages a file","Saves a permanent snapshot of staged changes","Deletes history","Connects to a remote"], answer:1, explain:"commit seals the staged changes into history, with a message." },
+      { q:"Which zone sits between your live files and history?", options:["The branch","The remote","The staging area","The HEAD"], answer:2, explain:"Working directory → staging area → repository." },
+      { q:"What's the -m flag for?", options:["Merge","Provide the commit message","Make a branch","Mark as important"], answer:1, explain:'-m attaches the message inline: git commit -m "..."' },
+    ],
+  },
+  {
+    numeral:"II", name:"Isle of Forking Tides", rank:"Merge Master", guardian:"The Tidewarden",
+    seed:{ carry:true, files:{ "about.html":true } },
+    intro:{ kicker:"Isle II · The Divided Water",
+      title:"A risk worth taking",
+      body:["Your repository lives, but the next repair is dangerous — change it directly and you could break what already holds.",
+            "So you'll split a parallel timeline, do the work safely there, then reunite it. Four runes: branch, record, return, merge."] },
+    outro:["The timelines flow back into one. The Repository stands whole — restored by your hand. You are its Keeper still."],
+    map:[
+      "~~~~~~~~~",
+      "~#G#....~",
+      "~.g.....~",
+      "~..1..2.~",
+      "~..M....~",
+      "~..3..4.~",
+      "~...S...~",
+      "~~~~~~~~~",
+    ],
+    stations:[
+      { tile:"1", title:"Open a parallel path", cmd:"git switch -c about-page", hint:"git switch -c about-page",
+        story:"Don't risk the main line. Branch off into a safe 'what if'.",
+        what:["A branch is a separate line of work — an alternate timeline.",
+              "git switch -c about-page creates a new branch and moves you onto it. New commits land here, leaving main untouched."],
+        objTxt:"Create & switch to a branch (git switch -c)",
+        check:(g)=>g.head!=="main",
+        reward:"The water forks. You walk a parallel path." },
+      { tile:"2", title:"Record on the branch", cmd:'git add about.html\ngit commit -m "Add about page"', hint:'git add about.html  →  git commit -m "Add about page"',
+        story:"You already know this rhythm: stage, then seal — here on your safe branch.",
+        what:["The same two motions you learned: git add to stage, then git commit to save.",
+              "Because you're on about-page, this snapshot lands on the branch — main stays exactly as it was."],
+        objTxt:"Stage about.html, then commit it (on the branch)",
+        check:(g,s)=>g.commitOrder.length>s.commits && g.head!=="main",
+        reward:"A new memory forms on the parallel path.", raisesMonument:true },
+      { tile:"3", title:"Return to the main line", cmd:"git switch main", hint:"git switch main",
+        story:"To reunite the paths, first stand on the one you're merging into.",
+        what:["git switch main hops back to your main branch.",
+              "You always merge into the branch you're currently standing on — so step onto main first."],
+        objTxt:"Switch back to main (git switch main)",
+        check:(g)=>g.head==="main",
+        reward:"You stand on the main line again." },
+      { tile:"4", title:"Reunite the timelines", cmd:"git merge about-page", hint:"git merge about-page",
+        story:"Bring the parallel path home.",
+        what:["git merge about-page weaves the branch's commits into main.",
+              "Git ties the two histories together with a merge commit — two rivers flowing back into one."],
+        objTxt:"Merge the branch in (git merge about-page)",
+        check:(g,s)=>(s.merges!=null)? (Object.values(g.commits).filter(c=>c.merge).length>s.merges) : Object.values(g.commits).some(c=>c.merge),
+        reward:"The timelines reunite. The monument is crowned.", raisesMonument:true },
+    ],
+    quiz:[
+      { q:"What is a branch?", options:["A backup file","A separate line of work / timeline","A type of commit","An account"], answer:1, explain:"A branch lets you develop in parallel without affecting main." },
+      { q:"git switch -c feature does what?", options:["Deletes the branch","Creates a new branch and switches to it","Commits your changes","Pushes online"], answer:1, explain:"-c means create, then it moves you onto the new branch." },
+      { q:"Before merging a branch into main, you should…", options:["Delete main","Switch to main first","Run git init again","Nothing special"], answer:1, explain:"You merge into the branch you're currently standing on." },
+      { q:"What does git merge do?", options:["Deletes a branch","Combines another branch's changes into your current one","Renames the project","Uploads code"], answer:1, explain:"merge brings one branch's work into the branch you're on." },
+      { q:"A merge conflict happens when…", options:["Two branches change the same line differently","You have too many branches","The network is down","A message is too long"], answer:0, explain:"Git can't auto-pick between two edits to the same line, so it asks you." },
+    ],
+  },
+  {
+    numeral:"III", name:"Isle of the Far Shore", rank:"Git Sage", guardian:"The Skywarden",
+    seed:{ carry:true, files:{ "README.md":true } },
+    intro:{ kicker:"Isle III · The Open Sky",
+      title:"Give it a home",
+      body:["The Repository is whole again — but it lives only here, on this fragile shore. One more storm could unmake it.",
+            "Send it skyward to a home that never forgets: a remote on GitHub. Three runes: name the shore, seal a parting memory, then push it to the sky."] },
+    outro:["Your world rises into the open sky, backed up beyond any storm. Every save point you made is safe forever. The restoration is complete, Keeper."],
+    map:[
+      "~~~~~~~~~",
+      "~#G#....~",
+      "~.g.....~",
+      "~.1.2.3.~",
+      "~...M...~",
+      "~...x...~",
+      "~...S...~",
+      "~~~~~~~~~",
+    ],
+    stations:[
+      { tile:"1", title:"Name the far shore", cmd:"git remote add origin https://github.com/keeper/world.git", hint:"git remote add origin https://github.com/keeper/world.git",
+        story:"Your repository needs a home in the sky. Point it at one.",
+        what:["A remote is a link to an online copy of your repo. Its usual nickname is origin.",
+              "git remote add origin <url> registers that link once — it doesn't upload anything yet."],
+        objTxt:"Add the remote (git remote add origin <url>)",
+        check:(g)=>g.remote!=null,
+        reward:"A thread of light reaches toward the far shore." },
+      { tile:"2", title:"Seal a parting memory", cmd:'git add README.md\ngit commit -m "Add README"', hint:'git add README.md  →  git commit -m "Add README"',
+        story:"One last memory before the crossing — a note for whoever finds your world.",
+        what:["The same rhythm you know: git add to stage, git commit to seal.",
+              "A README is a repo's front page. Commit it so it travels skyward with everything else."],
+        objTxt:"Stage README.md, then commit it",
+        check:(g,s)=>g.commitOrder.length>s.commits,
+        reward:"A final keystone crowns the monument.", raisesMonument:true },
+      { tile:"3", title:"Send it skyward", cmd:"git push -u origin main", hint:"git push -u origin main",
+        story:"Now lift the whole history into the open sky.",
+        what:["git push uploads your commits to the remote — your repo is now backed up online.",
+              "The -u links your local branch to the remote one, so next time you can just type git push."],
+        objTxt:"Push your work (git push -u origin main)",
+        check:(g)=>g.remote && g.remote.commitIds.length>0,
+        reward:"Your world ascends into the open sky." },
+    ],
+    quiz:[
+      { q:"What is GitHub?", options:["A version of Git","A website that hosts Git repositories online","A programming language","A text editor"], answer:1, explain:"GitHub hosts your repos online for backup and collaboration." },
+      { q:"What does git push do?", options:["Downloads commits","Uploads your local commits to the remote","Deletes a branch","Creates a repo"], answer:1, explain:"push sends your commits up to the remote." },
+      { q:"What is origin?", options:["Your first commit","The default nickname for your remote repo","The main branch","A merge conflict"], answer:1, explain:"origin is the conventional name for your remote." },
+      { q:"git clone is used to…", options:["Copy an existing repo onto your computer","Delete a repository","Rename a branch","Stage files"], answer:0, explain:"clone downloads a full repo so you can work on it locally." },
+      { q:"In git push -u origin main, the -u…", options:["Undoes the push","Links your local branch to the remote one","Uploads urgently","Makes a new branch"], answer:1, explain:"-u sets the upstream so later you can just type git push." },
+    ],
+  },
+];
+const RANKS = ["Wanderer","Apprentice","Committer","Merge Master","Git Sage"];
+
+/* ---------------- 3. SCENE SINGLETONS ---------------- */
+const C = { monument:0xf0d090, monumentEdge:0xf6c64e,
+  guardian:0x3f9d9a, guardianHi:0x8fd4d2, guardianDim:0x356f70, gate:0xc065a0,
+  robe:0xfbf6ee, robeHat:0xe8743e, robeSkin:0xf0d6bc, ring:0xf2c14e, lore:0x7a64b0,
+  stActive:0xf2b84a, stDone:0x53b58f, stDormant:0x86cfdd };
+
+/* per-level palettes — each isle gets its own sky, base, rim and tile colors.
+   The character (robe + orange hat) and the gate/guardian/monument stay constant. */
+const PALETTES = [
+  { /* I — Dusk Coral (the reference look) */
+    sky:"radial-gradient(125% 100% at 78% 6%, #f7b48f 0%, #ee9090 30%, #c074a0 62%, #6f5ca0 100%)",
+    fog:0x9a7fb0, hemiSky:0xffd9c0, hemiGround:0x5a4a86, key:0xffe2c2,
+    base:{top:0x9a86c4, side:0x7d6ab0}, rim:0xdf8a5c,
+    tile:{top:0xf2d7ad, top2:0xf7e0ba, side:0xe9c79a} },
+  { /* II — Jade Tide */
+    sky:"radial-gradient(125% 100% at 75% 8%, #aef0e0 0%, #5fc6c0 28%, #3f86b6 60%, #2c3f78 100%)",
+    fog:0x3f6f96, hemiSky:0xdaf5ee, hemiGround:0x2c4870, key:0xeafffb,
+    base:{top:0x4f78b4, side:0x3a5e96}, rim:0x3fa085,
+    tile:{top:0xe7efce, top2:0xeff5dd, side:0xd4e0bc} },
+  { /* III — Amethyst Sky */
+    sky:"radial-gradient(125% 100% at 75% 6%, #f3b6d6 0%, #c07fc8 30%, #8a5ec0 60%, #44386f 100%)",
+    fog:0x6a5aa0, hemiSky:0xf3d8f0, hemiGround:0x453872, key:0xfbe6f5,
+    base:{top:0x6a5aa8, side:0x52458a}, rim:0xab63bf,
+    tile:{top:0xead6f0, top2:0xf1e1f6, side:0xddc6e8} },
+];
+const TILE=1;
+const canvas=document.getElementById("scene");
+const renderer=new THREE.WebGLRenderer({canvas,antialias:true,alpha:true});
+renderer.setPixelRatio(Math.min(window.devicePixelRatio,1.5));
+renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+renderer.outputEncoding=THREE.sRGBEncoding;
+const scene=new THREE.Scene();
+scene.fog=new THREE.Fog(0x8a7fb5,17,32);
+const VIEW=7.2;
+const camera=new THREE.OrthographicCamera(-VIEW,VIEW,VIEW,-VIEW,0.1,100);
+camera.position.set(11,12,11);camera.lookAt(0,0,0);
+const hemi=new THREE.HemisphereLight(0xffd9c0,0x4a3b63,0.5); scene.add(hemi);
+const key=new THREE.DirectionalLight(0xffe0c0,0.82);key.position.set(7,11,4);key.castShadow=true;
+key.shadow.mapSize.set(1024,1024);key.shadow.camera.left=-9;key.shadow.camera.right=9;key.shadow.camera.top=9;
+key.shadow.camera.bottom=-9;key.shadow.camera.near=1;key.shadow.camera.far=40;key.shadow.bias=-0.0006;scene.add(key);
+const rim=new THREE.DirectionalLight(0x9aa0e0,0.22);rim.position.set(-6,4,-7);scene.add(rim);
+const goldLight=new THREE.PointLight(0xf2c14e,0,6,2);goldLight.position.set(0,2.4,0);scene.add(goldLight);
+
+/* persistent wanderer — constant across all isles (white robe, orange hat) */
+const hero=new THREE.Group();
+const heroFig=new THREE.Group(); hero.add(heroFig);
+{ const robeMat=new THREE.MeshStandardMaterial({color:C.robe,roughness:.9});
+  const body=new THREE.Mesh(new THREE.CylinderGeometry(0.1,0.27,0.62,16),robeMat);body.position.y=0.31;body.castShadow=true;heroFig.add(body);
+  const head=new THREE.Mesh(new THREE.SphereGeometry(0.125,16,16),new THREE.MeshStandardMaterial({color:C.robeSkin,roughness:.85}));head.position.y=0.7;head.castShadow=true;heroFig.add(head);
+  const band=new THREE.Mesh(new THREE.CylinderGeometry(0.135,0.155,0.09,16),new THREE.MeshStandardMaterial({color:C.robeHat,roughness:.7}));band.position.y=0.78;band.castShadow=true;heroFig.add(band);
+  const hat=new THREE.Mesh(new THREE.ConeGeometry(0.155,0.46,16),new THREE.MeshStandardMaterial({color:C.robeHat,roughness:.65,flatShading:true}));hat.position.y=1.04;hat.castShadow=true;heroFig.add(hat);
+}
+scene.add(hero);
+const ring=new THREE.Mesh(new THREE.RingGeometry(0.28,0.4,28),new THREE.MeshBasicMaterial({color:C.ring,transparent:true,opacity:0,side:THREE.DoubleSide}));
+ring.rotation.x=-Math.PI/2;ring.visible=false;scene.add(ring);
+let ringT=0;
+const raycaster=new THREE.Raycaster();const ptr=new THREE.Vector2();
+const clock=new THREE.Clock();
+
+/* ---------------- 4. ISLAND STATE + BUILDERS ---------------- */
+let IS=null;             // current island runtime
+let git=freshGit();      // the repository (carries across isles)
+let started=false, storyOpen=false, panelOpen=false, bossActive=false, resultOpen=false;
+let currentIsle=0, progressRank=0, totalScore=0;
+
+/* save/resume — survives an artifact frame reload. Uses the artifact storage
+   API when present; falls back to in-memory only (never touches localStorage). */
+const SAVE_KEY="gitquest:progress:v1";
+function hasStore(){ return !!(window.storage && typeof window.storage.set==="function"); }
+function persist(){ if(!hasStore())return;
+  try{ Promise.resolve(window.storage.set(SAVE_KEY, JSON.stringify({isle:currentIsle,rank:progressRank,score:totalScore,git}))).catch(()=>{}); }catch(e){} }
+async function readSave(){ if(!hasStore())return null;
+  try{ const r=await window.storage.get(SAVE_KEY); return (r&&r.value)?JSON.parse(r.value):null; }catch(e){ return null; } }
+function clearSave(){ if(!hasStore())return;
+  try{ Promise.resolve(window.storage.delete(SAVE_KEY)).catch(()=>{}); }catch(e){} }
+
+function canInteract(){ return started && !storyOpen && !panelOpen && !bossActive && !resultOpen; }
+
+function disposeGroup(grp){
+  grp.traverse(o=>{ if(o.geometry)o.geometry.dispose();
+    if(o.material){ (Array.isArray(o.material)?o.material:[o.material]).forEach(m=>m.dispose()); } });
+}
+
+function tileTypeOf(ch){
+  if(ch==="~")return "water"; if(ch==="#")return "wall"; if(ch==="S")return "spawn";
+  if(ch==="M")return "monument"; if(ch==="g")return "gate"; if(ch==="G")return "guardian";
+  if(ch==="x")return "lore"; if(ch>="1"&&ch<="9")return "station"; return "floor";
+}
+
+function loadIsland(idx, resumeGit){
+  // clear previous
+  if(IS&&IS.group){ scene.remove(IS.group); disposeGroup(IS.group); }
+  const data=CAMPAIGN[idx];
+  currentIsle=idx;
+
+  // git seed (or restore the saved isle-start repo when resuming)
+  if(resumeGit){ git=clone(resumeGit); }
+  else { if(data.seed.fresh){ git=freshGit(); }
+    git.workingFiles=Object.assign(git.workingFiles||{}, clone(data.seed.files||{})); }
+
+  const ROWS=data.map.length, COLS=data.map[0].length;
+  const offX=-((COLS-1)*TILE)/2, offZ=-((ROWS-1)*TILE)/2;
+  const tileToWorld=(c,r,y=0)=>new THREE.Vector3(c*TILE+offX,y,r*TILE+offZ);
+
+  const group=new THREE.Group(); scene.add(group);
+  IS={ data, ROWS, COLS, offX, offZ, tileToWorld, group, tiles:[],
+       stations:[], stationViz:[], gateTile:null, guardianTile:null, monumentTile:null, loreTile:null, spawnTile:null,
+       tiers:[], bars:[], gMat:null, gShards:[], gCore:null, gBase:null, shrineFloaters:[],
+       activeStation:0, gateOpen:false, complete:false, monBaseline:git.commitOrder.length };
+
+  const WALK=new Set(["floor","spawn","station"]);
+  const pal=PALETTES[idx % PALETTES.length]; IS.pal=pal;
+  document.getElementById("sky").style.background=pal.sky;
+  scene.fog.color.setHex(pal.fog);
+  hemi.color.setHex(pal.hemiSky); hemi.groundColor.setHex(pal.hemiGround); key.color.setHex(pal.key);
+
+  const CAP_TOP=0.66, RIM_TOP=0.58, BASE_TOP=0.2;
+
+  // play-area bounding box (everything that isn't void water)
+  let minC=COLS,maxC=0,minR=ROWS,maxR=0;
+  for(let r=0;r<ROWS;r++)for(let c=0;c<COLS;c++){ if(tileTypeOf(data.map[r][c])!=="water"){
+    if(c<minC)minC=c; if(c>maxC)maxC=c; if(r<minR)minR=r; if(r>maxR)maxR=r; } }
+
+  // tier 1 — purple base slab (whole footprint + overhang)
+  const baseSide=new THREE.MeshStandardMaterial({color:pal.base.side,roughness:1});
+  const baseTopM=new THREE.MeshStandardMaterial({color:pal.base.top,roughness:1});
+  const base=new THREE.Mesh(new THREE.BoxGeometry(COLS*TILE+0.8,1.5,ROWS*TILE+0.8),
+    [baseSide,baseSide,baseTopM,baseSide,baseSide,baseSide]);
+  base.position.set(0,BASE_TOP-0.75,0); base.receiveShadow=true; group.add(base);
+
+  // tier 2 — coral rim slab (forms the platform rim + the grid seams between caps)
+  const rimMat=new THREE.MeshStandardMaterial({color:pal.rim,roughness:1});
+  const rimSlab=new THREE.Mesh(new THREE.BoxGeometry((maxC-minC+1)*TILE+0.3,0.42,(maxR-minR+1)*TILE+0.3),[rimMat,rimMat,rimMat,rimMat,rimMat,rimMat]);
+  rimSlab.position.set(((minC+maxC)/2)*TILE+offX, RIM_TOP-0.21, ((minR+maxR)/2)*TILE+offZ);
+  rimSlab.receiveShadow=true; group.add(rimSlab);
+
+  // tier 3 — cream tile caps (small gaps reveal the coral rim as grid lines)
+  for(let r=0;r<ROWS;r++){ IS.tiles[r]=[];
+    for(let c=0;c<COLS;c++){
+      const type=tileTypeOf(data.map[r][c]);
+      if(type==="water"){ IS.tiles[r][c]={type,walkable:false,mesh:null,top:BASE_TOP,c,r}; continue; }
+      if(type==="wall"){
+        const wS=new THREE.MeshStandardMaterial({color:pal.base.side,roughness:1});
+        const wT=new THREE.MeshStandardMaterial({color:pal.base.top,roughness:1});
+        const w=new THREE.Mesh(new THREE.BoxGeometry(TILE*0.9,1.0,TILE*0.9),[wS,wS,wT,wS,wS,wS]);
+        w.position.copy(tileToWorld(c,r,0.7)); w.castShadow=true; w.receiveShadow=true; w.userData={c,r,type};
+        group.add(w); IS.tiles[r][c]={type,walkable:false,mesh:w,top:CAP_TOP,c,r}; continue;
+      }
+      const topCol=((c+r)%2===0)?pal.tile.top2:pal.tile.top;
+      const sideM=new THREE.MeshStandardMaterial({color:pal.tile.side,roughness:1});
+      const topM=new THREE.MeshStandardMaterial({color:topCol,roughness:.92});
+      const cap=new THREE.Mesh(new THREE.BoxGeometry(TILE*0.94,0.16,TILE*0.94),[sideM,sideM,topM,sideM,sideM,sideM]);
+      cap.position.copy(tileToWorld(c,r,CAP_TOP-0.08)); cap.castShadow=true; cap.receiveShadow=true; cap.userData={c,r,type};
+      group.add(cap);
+      const rec={type,walkable:WALK.has(type),mesh:cap,top:CAP_TOP,topMat:topM,baseTop:topCol,c,r};
+      IS.tiles[r][c]=rec;
+      if(type==="spawn")IS.spawnTile=rec;
+      if(type==="gate")IS.gateTile=rec;
+      if(type==="guardian")IS.guardianTile=rec;
+      if(type==="monument")IS.monumentTile=rec;
+      if(type==="lore")IS.loreTile=rec;
+      if(type==="station"){ const si=+data.map[r][c]-1; IS.stations[si]=rec; rec.stationIndex=si; }
+    }
+  }
+
+  // station diamonds + an active-rune ground ring (no beacon column)
+  data.stations.forEach((st,si)=>{
+    const tr=IS.stations[si];
+    const crystal=new THREE.Mesh(new THREE.OctahedronGeometry(0.22),
+      new THREE.MeshStandardMaterial({color:C.stDormant,emissive:C.stDormant,emissiveIntensity:.2,roughness:.35,flatShading:true}));
+    crystal.position.copy(tileToWorld(tr.c,tr.r,tr.top+0.5)); crystal.castShadow=true; crystal.userData={c:tr.c,r:tr.r}; group.add(crystal);
+    const gr=new THREE.Mesh(new THREE.RingGeometry(0.3,0.42,28),
+      new THREE.MeshBasicMaterial({color:C.stActive,transparent:true,opacity:0,side:THREE.DoubleSide}));
+    gr.rotation.x=-Math.PI/2; gr.position.copy(tileToWorld(tr.c,tr.r,tr.top+0.03)); gr.userData={c:tr.c,r:tr.r}; group.add(gr);
+    IS.stationViz[si]={crystal,ring:gr,tileRec:tr,topMat:tr.topMat,baseTop:tr.baseTop};
+  });
+
+  // monument
+  const monument=new THREE.Group();
+  monument.position.copy(tileToWorld(IS.monumentTile.c,IS.monumentTile.r,IS.monumentTile.top));
+  group.add(monument);
+  const plinth=new THREE.Mesh(new THREE.BoxGeometry(0.86,0.34,0.86),new THREE.MeshStandardMaterial({color:pal.rim,roughness:1}));
+  plinth.position.y=0.17;plinth.castShadow=true;plinth.receiveShadow=true;monument.add(plinth);
+  IS.monument=monument;
+
+  // gate
+  const gate=new THREE.Group(); gate.position.copy(tileToWorld(IS.gateTile.c,IS.gateTile.r,IS.gateTile.top)); group.add(gate);
+  const postMat=new THREE.MeshStandardMaterial({color:C.gate,roughness:.8,flatShading:true});
+  [-0.42,0.42].forEach(x=>{const p=new THREE.Mesh(new THREE.BoxGeometry(0.16,1.5,0.16),postMat);p.position.set(x,0.75,0);p.castShadow=true;gate.add(p);});
+  for(let i=0;i<4;i++){const bar=new THREE.Mesh(new THREE.BoxGeometry(0.86,0.1,0.1),
+      new THREE.MeshStandardMaterial({color:C.guardianHi,emissive:C.guardian,emissiveIntensity:.35,roughness:.4}));
+    bar.position.set(0,0.4+i*0.34,0);bar.castShadow=true;gate.add(bar);IS.bars.push(bar);}
+
+  // guardian
+  const guardian=new THREE.Group(); guardian.position.copy(tileToWorld(IS.guardianTile.c,IS.guardianTile.r,IS.guardianTile.top)); group.add(guardian);
+  const gMat=new THREE.MeshStandardMaterial({color:C.guardianDim,emissive:C.guardian,emissiveIntensity:.06,roughness:.45,flatShading:true});
+  IS.gMat=gMat;
+  IS.gCore=new THREE.Mesh(new THREE.IcosahedronGeometry(0.4,0),gMat);IS.gCore.position.y=0.78;IS.gCore.castShadow=true;guardian.add(IS.gCore);
+  IS.gBase=new THREE.Mesh(new THREE.ConeGeometry(0.42,0.9,6),gMat);IS.gBase.position.y=0.4;IS.gBase.castShadow=true;guardian.add(IS.gBase);
+  for(let i=0;i<5;i++){const s=new THREE.Mesh(new THREE.TetrahedronGeometry(0.16),gMat);const a=(i/5)*Math.PI*2;
+    s.position.set(Math.cos(a)*0.55,0.78+Math.sin(a*2)*0.18,Math.sin(a)*0.55);guardian.add(s);IS.gShards.push(s);}
+
+  // lore stone
+  if(IS.loreTile){const stone=new THREE.Mesh(new THREE.DodecahedronGeometry(0.22),new THREE.MeshStandardMaterial({color:C.lore,roughness:.85,flatShading:true}));
+    stone.position.copy(tileToWorld(IS.loreTile.c,IS.loreTile.r,IS.loreTile.top+0.18));stone.castShadow=true;group.add(stone);}
+
+  // place hero
+  hero.position.copy(tileToWorld(IS.spawnTile.c,IS.spawnTile.r,IS.spawnTile.top+0.02));
+  hero.rotation.y=0;
+  IS.heroTile=IS.spawnTile;
+  pathQueue=[]; moving=false;
+
+  // restore any tiers from carried commits already? keep monument empty per isle; grows via raisesMonument
+  refreshStationVisuals();
+  updateHud();
+  document.getElementById("hudIsle").textContent="Git Quest · Isle "+data.numeral;
+  document.getElementById("hudName").textContent=data.name;
+
+  // story intro then play
+  persist();
+  showStory(data, ()=>{ started=true; setPill(firstPillText()); });
+}
+
+function firstPillText(){ return "Walk to the glowing rune, then learn its command."; }
+
+function refreshStationVisuals(){
+  IS.data.stations.forEach((st,si)=>{
+    const viz=IS.stationViz[si]; const done=si<IS.activeStation;
+    const active=si===IS.activeStation && !IS.complete;
+    const col= done?C.stDone : active?C.stActive : C.stDormant;
+    viz.crystal.material.color.setHex(col);
+    viz.crystal.material.emissive.setHex(col);
+    viz.crystal.material.emissiveIntensity = done?.5 : active?.7 : .18;
+    viz.ring.material.color.setHex(active?C.stActive:C.stDone);
+    viz.topMat.color.setHex( done? mix(viz.baseTop,C.stDone,0.16) : active? mix(viz.baseTop,C.stActive,0.26) : viz.baseTop );
+  });
+  const dots=document.getElementById("runeDots"); dots.innerHTML="";
+  IS.data.stations.forEach((_,si)=>{ const d=document.createElement("span");
+    d.className="runedot "+(si<IS.activeStation?"done":(si===IS.activeStation&&!IS.complete?"active":""));dots.appendChild(d);});
+}
+
+/* ---------------- 5. MOVEMENT + RAYCAST + TRIGGERS ---------------- */
+let pathQueue=[], moving=false, pendingArrival=null;
+function isWalkable(rec){ if(!rec)return false; if(rec.type==="gate")return IS.gateOpen; return rec.walkable; }
+function neighbors(rec){ const out=[];const {c,r}=rec;
+  [[0,1],[0,-1],[1,0],[-1,0]].forEach(([dc,dr])=>{const nr=r+dr,nc=c+dc;
+    if(nr>=0&&nr<IS.ROWS&&nc>=0&&nc<IS.COLS){const t=IS.tiles[nr][nc];if(isWalkable(t))out.push(t);}});return out;}
+function bfs(start,goal){ if(start===goal)return [start]; const q=[start];const prev=new Map();prev.set(start,null);
+  while(q.length){const cur=q.shift();if(cur===goal)break;for(const n of neighbors(cur))if(!prev.has(n)){prev.set(n,cur);q.push(n);}}
+  if(!prev.has(goal))return null;const path=[];let c=goal;while(c){path.unshift(c);c=prev.get(c);}return path;}
+
+function walkTo(tile){
+  if(!canInteract()||moving)return;
+  let target=tile;
+  if(tile.type==="guardian")target=IS.gateTile;
+  if(!isWalkable(target)){
+    if(target===IS.gateTile&&!IS.gateOpen)toast("The gate is sealed. Restore every rune first.");
+    return;
+  }
+  const path=bfs(IS.heroTile,target); if(!path){toast("No path that way.");return;}
+  pathQueue=path.slice(1).map(t=>IS.tileToWorld(t.c,t.r,t.top+0.02));
+  pendingArrival=target; moving=pathQueue.length>0;
+  if(!moving)onArrive(target);
+  const wp=IS.tileToWorld(target.c,target.r,target.top+0.04);
+  ring.position.copy(wp);ring.visible=true;ringT=0;ring.material.opacity=.9;ring.scale.set(.6,.6,.6);
+}
+function onArrive(tile){
+  IS.heroTile=tile;
+  if(tile.type==="station"){
+    const si=tile.stationIndex;
+    if(IS.complete){ toast("Every rune is restored. The guardian waits east."); }
+    else if(si<IS.activeStation){ toast("This rune is already restored."); }
+    else if(si>IS.activeStation){ toast("This rune is still dormant — restore the one glowing first."); }
+    else openStation(si);
+  } else if(tile===IS.gateTile&&IS.gateOpen){ startBoss(); }
+  if(IS.loreTile){const dl=Math.abs(tile.c-IS.loreTile.c)+Math.abs(tile.r-IS.loreTile.r);
+    if(dl===1)toast("A lore stone hums: \u201ca branch is a question; a merge is its answer.\u201d");}
+}
+function pickTile(x,y){
+  const rect=canvas.getBoundingClientRect();
+  ptr.x=((x-rect.left)/rect.width)*2-1; ptr.y=-((y-rect.top)/rect.height)*2+1;
+  raycaster.setFromCamera(ptr,camera);
+  const meshes=[]; for(let r=0;r<IS.ROWS;r++)for(let c=0;c<IS.COLS;c++){const m=IS.tiles[r][c].mesh; if(m)meshes.push(m);}
+  IS.stationViz.forEach(v=>{ meshes.push(v.crystal, v.ring); });
+  meshes.push(IS.gCore,IS.gBase);
+  const hit=raycaster.intersectObjects(meshes,false)[0]; if(!hit)return null;
+  const ud=hit.object.userData; if(ud&&ud.c!=null)return IS.tiles[ud.r][ud.c]; return IS.guardianTile;
+}
+canvas.addEventListener("pointerdown",(e)=>{ if(!canInteract())return; const t=pickTile(e.clientX,e.clientY); if(t)walkTo(t); });
+
+/* ---------------- 6. RENDER LOOP ---------------- */
+function animate(){
+  requestAnimationFrame(animate);
+  const dt=Math.min(clock.getDelta(),0.05), time=clock.elapsedTime;
+  if(IS){
+    if(moving&&pathQueue.length){
+      const tgt=pathQueue[0], pos=hero.position, dir=new THREE.Vector3().subVectors(tgt,pos), dist=dir.length();
+      if(dist<0.05){ pos.copy(tgt); pathQueue.shift(); if(!pathQueue.length){moving=false;onArrive(pendingArrival);} }
+      else { dir.normalize(); pos.addScaledVector(dir,Math.min(dist,3.3*dt)); hero.rotation.y=Math.atan2(dir.x,dir.z);
+        heroFig.position.y=Math.abs(Math.sin(time*11))*0.05; }
+    } else { heroFig.position.y=Math.sin(time*1.6)*0.012; }
+
+    if(ring.visible){ ringT+=dt; const k=ringT/0.9; ring.scale.setScalar(0.6+k*0.9);
+      ring.material.opacity=Math.max(0,0.9*(1-k)); if(k>=1)ring.visible=false; }
+
+    // station diamonds + active ground ring
+    IS.stationViz.forEach((v,si)=>{ v.crystal.rotation.y+=dt*0.7;
+      const base=v.tileRec.top+0.5; v.crystal.position.y=base+Math.sin(time*1.4+si)*0.05;
+      const isActive=si===IS.activeStation&&!IS.complete;
+      const targO=isActive?0.5+Math.sin(time*3)*0.18:0; v.ring.material.opacity+=(targO-v.ring.material.opacity)*Math.min(1,dt*5);
+      const s=1+(isActive?Math.sin(time*3)*0.06:0); v.ring.scale.set(s,s,s); });
+
+    // monument tiers drop-in
+    IS.tiers.forEach(b=>{ if(b.position.y>b.userData.targetY+0.001){ b.position.y+=(b.userData.targetY-b.position.y)*Math.min(1,dt*6); b.rotation.y+=dt*2; } });
+
+    // gate opening
+    if(IS.gateOpen){ IS.bars.forEach((bar,i)=>{ bar.position.y+=((2.2+i*0.1)-bar.position.y)*Math.min(1,dt*2.2);
+      bar.material.transparent=true; bar.material.opacity=Math.max(0,bar.material.opacity-dt*0.6); }); }
+
+    // guardian
+    IS.gCore.rotation.y+=dt*0.5;IS.gCore.rotation.x+=dt*0.18;
+    IS.gShards.forEach((s,i)=>{const a=time*0.6+i;s.position.y=0.78+Math.sin(a*1.4)*0.16;s.rotation.x+=dt;});
+    const wake=IS.complete?0.9:0.06; IS.gMat.emissiveIntensity+=(wake-IS.gMat.emissiveIntensity)*Math.min(1,dt*2);
+
+    const gl=panelOpen?0.7:0; goldLight.intensity+=(gl-goldLight.intensity)*Math.min(1,dt*3);
+    if(panelOpen&&IS.stations[IS.activeStation]) goldLight.position.copy(IS.tileToWorld(IS.stations[IS.activeStation].c,IS.stations[IS.activeStation].r,1.2));
+  }
+  renderer.render(scene,camera);
+}
+function resize(){ const w=innerWidth,h=innerHeight; renderer.setSize(w,h,false);
+  const a=w/h, v=VIEW*(h<560?1.18:1); camera.left=-v*a;camera.right=v*a;camera.top=v;camera.bottom=-v;camera.updateProjectionMatrix(); }
+addEventListener("resize",resize); resize(); animate();
+
+function growMonument(){
+  const i=IS.tiers.length; const w=0.7-i*0.06;
+  const block=new THREE.Mesh(new THREE.BoxGeometry(w,0.42,w),
+    new THREE.MeshStandardMaterial({color:C.monument,emissive:C.monumentEdge,emissiveIntensity:.32,roughness:.55,flatShading:true}));
+  const targetY=0.34+0.21+i*0.46; block.position.set(0,targetY+2,0); block.userData={targetY}; block.castShadow=true;
+  IS.monument.add(block); IS.tiers.push(block);
+}
+
+/* ---------------- 7. STATION PANEL (teach -> console) ---------------- */
+const panel=document.getElementById("panel");
+const pScroll=document.getElementById("pScroll"), pInput=document.getElementById("pInput");
+let stationSnap=null, activeStationData=null, stationSolved=false;
+
+function setPill(txt){ const p=document.getElementById("pill"); document.getElementById("pillTxt").textContent=txt; p.style.opacity="1"; }
+function hidePill(){ document.getElementById("pill").style.opacity="0"; }
+
+function openStation(si){
+  panelOpen=true; stationSolved=false; activeStationData=CAMPAIGN[currentIsle].stations[si];
+  document.getElementById("pNum").textContent=si+1;
+  document.getElementById("pTitle").textContent=activeStationData.title;
+  document.getElementById("pSub").textContent="rune "+(si+1)+" of "+CAMPAIGN[currentIsle].stations.length+" · branch "+git.head;
+  document.getElementById("pStory").textContent=activeStationData.story;
+  const what=document.getElementById("pWhat"); what.innerHTML=""; activeStationData.what.forEach(t=>{const p=document.createElement("p");p.textContent=t;what.appendChild(p);});
+  document.getElementById("pCmd").textContent=activeStationData.cmd.replace(/\n/g," → ");
+  // reset console
+  pScroll.innerHTML=""; document.getElementById("pSealed").classList.remove("show");
+  document.getElementById("pObjTxt").textContent=activeStationData.objTxt;
+  document.getElementById("pObj").classList.remove("ok");
+  panel.classList.remove("mode-console"); panel.classList.add("mode-teach","open");
+  hidePill();
+}
+function toConsole(){
+  panel.classList.remove("mode-teach"); panel.classList.add("mode-console");
+  stationSnap={ commits:git.commitOrder.length, head:git.head, merges:Object.values(git.commits).filter(c=>c.merge).length };
+  if(!pScroll.childElementCount){
+    pushP([L("This rune accepts real Git. Type the command — or 'help'.","muted")]);
+  }
+  setTimeout(()=>pInput.focus(),180);
+}
+function closePanel(){ panelOpen=false; panel.classList.remove("open"); pInput.blur();
+  if(IS.complete) setPill("The gate is open. Walk east to "+CAMPAIGN[currentIsle].guardian+"."); else setPill(firstPillText()); }
+
+function pushP(lines){ lines.forEach(l=>{ if(l.__clear){pScroll.innerHTML="";return;}
+  const d=document.createElement("div"); d.className="tline "+(l.type||"out"); d.textContent=l.text; pScroll.appendChild(d); });
+  pScroll.scrollTop=pScroll.scrollHeight; }
+
+function submitStation(raw){
+  if(!raw.trim())return;
+  const e=document.createElement("div");e.className="tline cmd";e.textContent=raw;pScroll.appendChild(e);
+  const res=runCommand(git,raw); git=res.git; pushP(res.lines);
+  if(!stationSolved && activeStationData.check(git,stationSnap)){ solveStation(); }
+  pScroll.scrollTop=pScroll.scrollHeight;
+}
+function solveStation(){
+  if(stationSolved)return; stationSolved=true;
+  document.getElementById("pObj").classList.add("ok");
+  document.getElementById("pReward").textContent=activeStationData.reward;
+  document.getElementById("pSealed").classList.add("show");
+  document.getElementById("pClose").style.opacity=".35";
+  if(activeStationData.raisesMonument) growMonument();
+  document.getElementById("pInput").blur();
+}
+function advanceStation(){
+  document.getElementById("pClose").style.opacity="1";
+  IS.activeStation++;
+  closePanel();
+  if(IS.activeStation>=CAMPAIGN[currentIsle].stations.length){
+    IS.complete=true; IS.gateOpen=true; IS.gateTile.walkable=true;
+    refreshStationVisuals();
+    setPill("The gate unbars. Walk east to "+CAMPAIGN[currentIsle].guardian+".");
+    toast("Every rune restored. The gate opens.");
+  } else {
+    refreshStationVisuals();
+    setPill("A new rune glows. Walk to it.");
+    toast("Rune restored. The next one wakes.");
+  }
+}
+document.getElementById("pGo").addEventListener("click",toConsole);
+document.getElementById("pClose").addEventListener("click",()=>{ if(stationSolved) advanceStation(); else closePanel(); });
+document.getElementById("pOnward").addEventListener("click",advanceStation);
+pInput.addEventListener("keydown",(e)=>{ if(e.key==="Enter"){const v=pInput.value;pInput.value="";submitStation(v);} });
+
+/* ---------------- 8. BOSS ---------------- */
+const elBoss=document.getElementById("boss"), elQ=document.getElementById("qcard");
+const elHp=document.getElementById("hpFill"), elHearts=document.getElementById("hearts");
+const elArc=document.getElementById("timerArc"), elTnum=document.getElementById("timerNum");
+const ARC=2*Math.PI*21; elArc.style.strokeDasharray=ARC;
+let bq=[],bIdx=0,hp=0,hpMax=0,hearts=3,streak=0,bestStreak=0,runScore=0;
+let qTime=12,qLeft=12,qTimer=null,answered=false,curCard=null;
+function shuffle(a){a=a.slice();for(let i=a.length-1;i>0;i--){const j=(Math.random()*(i+1))|0;[a[i],a[j]]=[a[j],a[i]];}return a;}
+function startBoss(){ bossActive=true; const data=CAMPAIGN[currentIsle];
+  document.getElementById("gName").textContent=data.guardian;
+  bq=shuffle(data.quiz);bIdx=0;hpMax=bq.length;hp=hpMax;hearts=3;streak=0;bestStreak=0;runScore=0;
+  elBoss.style.display="flex"; renderHearts(); elHp.style.width="100%"; nextQ(); }
+function renderHearts(){ elHearts.innerHTML="";
+  for(let i=0;i<3;i++){const s=document.createElement("div");s.className="heart"+(i>=hearts?" gone":"");
+    s.innerHTML='<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 21s-7.5-4.9-10-9.3C.4 8.6 2 5 5.5 5c2 0 3.4 1.2 4.5 2.6C11 6.2 12.5 5 14.5 5 18 5 19.6 8.6 22 11.7 19.5 16.1 12 21 12 21z"/></svg>';
+    elHearts.appendChild(s);} }
+function setArc(f){ elArc.style.strokeDashoffset=ARC*(1-f); }
+function nextQ(){ if(hp<=0)return endBoss(true); if(hearts<=0)return endBoss(false);
+  if(bIdx>=bq.length)bq=bq.concat(shuffle(CAMPAIGN[currentIsle].quiz));
+  const src=bq[bIdx]; answered=false; qLeft=qTime;
+  const order=shuffle(src.options.map((_,i)=>i));
+  curCard={ q:src.q, explain:src.explain, options:order.map(i=>src.options[i]), answer:order.indexOf(src.answer) };
+  const card=curCard;
+  elQ.innerHTML=`<div class="tag">The guardian asks ${streak>=2?'· <span class="combo">✦ '+streak+' streak</span>':''}</div>
+    <div class="q">${card.q}</div>
+    <div class="opts">${card.options.map((o,i)=>`<button class="opt" data-i="${i}"><span class="k">${String.fromCharCode(65+i)}</span>${o}</button>`).join("")}</div>
+    <div class="verdict" id="verdict" style="display:none"></div>`;
+  elQ.querySelectorAll(".opt").forEach(b=>b.addEventListener("click",()=>choose(+b.dataset.i)));
+  setArc(1);elTnum.textContent=qTime; clearInterval(qTimer);
+  qTimer=setInterval(()=>{ qLeft-=0.1; if(qLeft<=0){qLeft=0;setArc(0);clearInterval(qTimer);if(!answered)resolve(false,-1);}
+    else{setArc(qLeft/qTime);elTnum.textContent=Math.ceil(qLeft);} },100); }
+function choose(i){ if(answered)return; resolve(i===curCard.answer,i); }
+function resolve(correct,picked){ answered=true; clearInterval(qTimer);
+  const card=curCard; elQ.querySelectorAll(".opt").forEach(o=>{const oi=+o.dataset.i;
+    if(oi===card.answer)o.classList.add("right");else if(oi===picked)o.classList.add("wrong");});
+  const v=document.getElementById("verdict");v.style.display="flex";
+  if(correct){ hp--; streak++; bestStreak=Math.max(bestStreak,streak);
+    const bonus=Math.round(qLeft*8)+streak*15; runScore+=50+bonus;
+    v.className="verdict good"; v.innerHTML=`✦ A crystal cracks.<span class="explain">+${50+bonus} · ${card.explain}</span>`;
+    elHp.style.width=(hp/hpMax*100)+"%"; }
+  else { hearts--; streak=0; v.className="verdict bad";
+    v.innerHTML=`${picked<0?"Time's up.":"Not quite."}<span class="explain">Answer: ${card.options[card.answer]}. ${card.explain}</span>`;
+    renderHearts(); }
+  bIdx++; setTimeout(()=>{ if(hp<=0)endBoss(true);else if(hearts<=0)endBoss(false);else nextQ(); },1250); }
+function endBoss(win){ bossActive=false; clearInterval(qTimer); elBoss.style.display="none"; showResult(win); }
+
+/* ---------------- 9. RESULT / OUTRO / PROGRESSION ---------------- */
+const elResult=document.getElementById("result");
+let resultAction=null;
+function showResult(win){
+  resultOpen=true; const data=CAMPAIGN[currentIsle]; const isLast=currentIsle>=CAMPAIGN.length-1;
+  const kick=document.getElementById("resKicker"), title=document.getElementById("resTitle"),
+        sub=document.getElementById("resSub"), recap=document.getElementById("resRecap"), cta=document.getElementById("resCta");
+  if(win){
+    progressRank=Math.max(progressRank, RANKS.indexOf(data.rank)); totalScore+=runScore; updateHud();
+    kick.textContent="Isle "+data.numeral+" restored";
+    title.textContent=data.guardian+" rests.";
+    sub.textContent=data.outro[0];
+    recap.innerHTML=`<span class="chip gold">+${runScore} pts</span><span class="chip">Best streak ×${bestStreak}</span>
+      <span class="chip">Commits ${git.commitOrder.length}</span><span class="chip">Rank · ${RANKS[progressRank]}</span>`;
+    if(isLast){
+      kick.textContent="The voyage is complete";
+      title.textContent="The Repository is whole.";
+      sub.textContent=data.outro[0]+" You've learned to save, branch, merge, and back up real work — that's the everyday craft of Git.";
+      recap.innerHTML=`<span class="chip gold">✦ All ${CAMPAIGN.length} isles restored</span><span class="chip gold">${totalScore} pts total</span>
+        <span class="chip">Rank · ${RANKS[progressRank]}</span>`;
+      cta.textContent="Set sail again ▸";
+      resultAction=()=>{ currentIsle=0; progressRank=0; totalScore=0; clearSave(); hideVeil(elResult); resultOpen=false; loadIsland(0); };
+    }
+    else { cta.textContent="Sail to Isle "+CAMPAIGN[currentIsle+1].numeral+" ▸"; const nxt=currentIsle+1;
+      resultAction=()=>{ hideVeil(elResult); resultOpen=false; loadIsland(nxt); }; }
+  } else {
+    kick.textContent="The trial continues";
+    title.textContent=data.guardian+" still stands.";
+    sub.textContent="Your hearts ran out — but the knowledge sticks. Steady your timing and face it again.";
+    recap.innerHTML=`<span class="chip">${runScore} pts</span><span class="chip">Best streak ×${bestStreak}</span>`;
+    cta.textContent="Face "+data.guardian+" again";
+    resultAction=()=>{ hideVeil(elResult); resultOpen=false; startBoss(); };
+  }
+  showVeil(elResult);
+}
+document.getElementById("resCta").addEventListener("click",()=>{ if(resultAction)resultAction(); });
+
+/* ---------------- 10. STORY OVERLAY + HUD + TOAST + BOOT ---------------- */
+const elStory=document.getElementById("story");
+let storyDone=null;
+function showStory(data,onDone){
+  storyOpen=true; storyDone=onDone;
+  document.getElementById("stKicker").textContent=data.intro.kicker;
+  document.getElementById("stTitle").innerHTML=data.intro.title;
+  const body=document.getElementById("stBody"); body.innerHTML=""; data.intro.body.forEach(t=>{const p=document.createElement("p");p.textContent=t;body.appendChild(p);});
+  document.getElementById("stCta").textContent = data.numeral==="I" ? "Step ashore" : "Sail ashore";
+  showVeil(elStory);
+}
+document.getElementById("stCta").addEventListener("click",()=>{ hideVeil(elStory); storyOpen=false; if(storyDone)storyDone(); });
+
+function showVeil(el){ el.classList.remove("hide"); }
+function hideVeil(el){ el.classList.add("hide"); }
+
+function updateHud(){ document.getElementById("rankVal").textContent=RANKS[progressRank]||"Wanderer";
+  if(IS)refreshStationVisuals(); }
+
+const elToast=document.getElementById("toast"),elToastTxt=document.getElementById("toastTxt");let toastId=null;
+function toast(m){ elToastTxt.textContent=m; elToast.classList.add("show"); clearTimeout(toastId); toastId=setTimeout(()=>elToast.classList.remove("show"),3200); }
+
+const titleEl=document.getElementById("title");
+const startBtn=document.getElementById("startBtn");
+const continueBtn=document.getElementById("continueBtn");
+function beginPlay(idx,resumeGit){ hideVeil(titleEl); loadIsland(idx,resumeGit); }
+startBtn.addEventListener("click",()=>{ clearSave(); currentIsle=0; progressRank=0; totalScore=0; git=freshGit(); beginPlay(0); });
+continueBtn.addEventListener("click",()=>{ const s=continueBtn._save; if(!s)return;
+  progressRank=s.rank||0; totalScore=s.score||0; beginPlay(s.isle, s.git); });
+
+/* if a later isle was saved, offer to resume instead of restarting at Isle I */
+readSave().then(s=>{ if(s && s.isle>0 && CAMPAIGN[s.isle]){
+  continueBtn._save=s; continueBtn.style.display="";
+  continueBtn.textContent="Continue · Isle "+CAMPAIGN[s.isle].numeral+" ▸";
+  startBtn.classList.add("ghost"); startBtn.textContent="Start over";
+}});
+
+/* WebGL context can be dropped under memory pressure (esp. mobile) — recover instead of dying */
+canvas.addEventListener("webglcontextlost",(e)=>{ e.preventDefault(); },false);
+canvas.addEventListener("webglcontextrestored",()=>{ resize(); },false);
+</script>
