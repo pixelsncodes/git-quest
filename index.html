@@ -1,7 +1,7 @@
 <!doctype html>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
-<title>Git Quest — The Unmade Repository</title>
+<title>Git Quest: The Unmade Repository</title>
 <style>
   :root{
     --peach:#f6c9a4; --periwinkle:#9b8fc9; --sand:#e7b58a; --sand-2:#d99a6c;
@@ -47,8 +47,8 @@
 
   /* generic overlay (title + story + result) */
   .veil{position:fixed;inset:0;z-index:30;display:flex;flex-direction:column;align-items:center;justify-content:center;
-      text-align:center;padding:26px;background:radial-gradient(80% 60% at 50% 40%, rgba(44,36,64,.22), rgba(28,18,46,.62));
-      backdrop-filter:blur(3px);transition:opacity .6s}
+      text-align:center;padding:26px;background:radial-gradient(80% 60% at 50% 40%, rgba(18,10,30,.74), rgba(10,4,20,.88));
+      backdrop-filter:blur(6px);transition:opacity .6s}
   .veil.hide{opacity:0;pointer-events:none;visibility:hidden;transition:opacity .6s,visibility 0s linear .6s}
   .veil.hide *{pointer-events:none!important}
   .kicker{font-family:var(--mono);font-size:.7rem;letter-spacing:.3em;text-transform:uppercase;color:rgba(251,243,231,.8)}
@@ -250,15 +250,15 @@
 <div id="title" class="veil">
   <div class="kicker">An adventure in version control</div>
   <h2>Git&nbsp;<em>Quest</em></h2>
-  <div class="body"><p>The Repository — a whole world held in saved memory — came undone in a storm. You are its Keeper. Sail the dusk isles and rebuild its history, one command at a time.</p></div>
+  <div class="body"><p>The Repository, a whole world held in saved memory, came undone in a storm. You are its Keeper. Sail the dusk isles and rebuild its history, one command at a time.</p></div>
   <div style="display:flex;gap:11px;flex-wrap:wrap;justify-content:center">
     <button class="cta" id="continueBtn" style="display:none">Continue</button>
     <button class="cta" id="startBtn">Begin the restoration</button>
   </div>
   <div class="legend">
-    <span><i style="background:var(--terracotta)"></i> Rune — learn, then type</span>
-    <span><i style="background:var(--gold)"></i> Monument — your commits</span>
-    <span><i style="background:var(--teal)"></i> Guardian — the trial</span>
+    <span><i style="background:var(--terracotta)"></i> Rune: learn, then type</span>
+    <span><i style="background:var(--gold)"></i> Monument: your commits</span>
+    <span><i style="background:var(--teal)"></i> Guardian: the trial</span>
   </div>
 </div>
 
@@ -278,7 +278,7 @@ function mix(a,b,t){ const ar=(a>>16)&255,ag=(a>>8)&255,ab=a&255,br=(b>>16)&255,
 /* ---------------- 1. GIT ENGINE (ported, full) ---------------- */
 function genHash(n){const x=((n+1)*2654435761)%2147483647;return (x>>>0).toString(16).padStart(7,"0").slice(0,7);}
 function freshGit(){return{initialized:false,workingFiles:{},staged:{},commits:{},commitOrder:[],
-  branches:{main:null},lanes:{main:0},head:"main",counter:0,remote:null,lastCmd:""};}
+  branches:{main:null},lanes:{main:0},head:"main",counter:0,remote:null,tags:{},lastCmd:""};}
 function tokenize(input){const re=/"([^"]*)"|'([^']*)'|(\S+)/g;const out=[];let m;
   while((m=re.exec(input)))out.push(m[1]??m[2]??m[3]);return out;}
 function assignLane(g,name){if(g.lanes[name]==null)g.lanes[name]=Object.keys(g.lanes).length;}
@@ -292,12 +292,13 @@ function runCommand(git,raw){
     say("  git log · git branch · git switch -c <name> · git switch <name> · git merge <name>");
     say("  git restore <file> · git restore --staged <file> · git revert HEAD");
     say("  git clone <url> · git fetch [origin] · git pull [origin] [branch]");
+    say("  git tag <name> · git tag · git diff");
     say("  ls · clear");return{git,lines:out};}
   const g=clone(git);
   if(t[0]==="ls"){const all=[...Object.keys(g.workingFiles),...Object.keys(g.staged)];
     say(all.length?all.join("   "):"(empty project)");return{git:g,lines:out};}
   if(t[0]!=="git"){say(`command not found: ${t[0]}`,"err");
-    say('This is a git practice rune — start commands with "git".',"muted");return{git,lines:out};}
+    say('This is a git practice rune. Start commands with "git".',"muted");return{git,lines:out};}
   const sub=t[1];
   if(sub==="--version"||sub==="version"){say("git version 2.43.0");g.lastCmd="version";return{git:g,lines:out};}
   if(sub==="init"){
@@ -318,7 +319,7 @@ function runCommand(git,raw){
     ];
     g.remote={url,commitIds:[b0,a1,a2],branches:{main:a2},aheadCommits:ahead,fetched:false};
     say(`Cloning from ${url}...`,"cyan");say("remote: Counting objects: 3, done.","muted");
-    say("Cloned into /world/ — your teammate has 2 commits you don't have yet.","success");
+    say("Cloned into /world/. Your teammate has 2 commits you don't have yet.","success");
     say("Run git fetch to download them, then git pull to merge them in.","muted");
     return{git:g,lines:out};}
   if(!g.initialized){say("fatal: not a git repository","err");say('Run "git init" first to create one.',"muted");return{git,lines:out};}
@@ -332,18 +333,18 @@ function runCommand(git,raw){
     case "add":{g.lastCmd="add";const target=t[2];
       if(!target){say("Nothing specified. Try: git add . (to stage everything)","err");break;}
       if(target==="."||target==="-A"){const names=Object.keys(g.workingFiles);
-        if(!names.length)say("Nothing to add — working tree is clean.","muted");
+        if(!names.length)say("Nothing to add. Working tree is clean.","muted");
         else{names.forEach(n=>{g.staged[n]=true;delete g.workingFiles[n];});say(`Staged ${names.length} file(s): ${names.join(", ")}`,"success");}
       }else if(g.staged[target]){say(`${target} is already staged.`,"muted");}
       else if(g.workingFiles[target]){g.staged[target]=true;delete g.workingFiles[target];say(`Staged ${target}`,"success");}
       else{say(`fatal: pathspec '${target}' did not match any files`,"err");say("Tip: type ls to see your files.","muted");}break;}
     case "commit":{g.lastCmd="commit";const mi=t.indexOf("-m");const msg=mi>=0?t[mi+1]:null;
-      if(Object.keys(g.staged).length===0){say("nothing to commit — stage files first with git add","err");break;}
+      if(Object.keys(g.staged).length===0){say("nothing to commit; stage files first with git add","err");break;}
       if(!msg){say('Please add a message: git commit -m "what you changed"',"err");break;}
       const id=genHash(g.counter);const parentTip=g.branches[g.head];
       g.commits[id]={id,message:msg,parents:parentTip?[parentTip]:[],branch:g.head,order:g.counter,lane:g.lanes[g.head]??0};
       g.commitOrder.push(id);const n=Object.keys(g.staged).length;g.branches[g.head]=id;g.counter++;g.staged={};
-      say(`[${g.head} ${id}] ${msg}`,"success");say(` ${n} file(s) committed — snapshot saved.`,"muted");break;}
+      say(`[${g.head} ${id}] ${msg}`,"success");say(` ${n} file(s) committed. Snapshot saved.`,"muted");break;}
     case "log":{g.lastCmd="log";
       if(g.commitOrder.length===0){say("fatal: your current branch does not have any commits yet","err");break;}
       const oneline=t.includes("--oneline");let cur=g.branches[g.head];const chain=[];
@@ -363,7 +364,7 @@ function runCommand(git,raw){
       else{if(!Object.prototype.hasOwnProperty.call(g.branches,name)){say(`error: no branch named '${name}'`,"err");break;}
         g.head=name;say(`Switched to branch '${name}'`,"success");}break;}
     case "merge":{g.lastCmd="merge";const other=t[2];
-      if(!other||!Object.prototype.hasOwnProperty.call(g.branches,other)){say(`merge: '${other}' — not something we can merge`,"err");break;}
+      if(!other||!Object.prototype.hasOwnProperty.call(g.branches,other)){say(`merge: '${other}' is not something we can merge`,"err");break;}
       if(other===g.head){say("Already up to date.","muted");break;}
       const targetTip=g.branches[g.head],sourceTip=g.branches[other];
       if(sourceTip===targetTip||sourceTip==null){say("Already up to date.","muted");break;}
@@ -371,7 +372,7 @@ function runCommand(git,raw){
       g.commits[id]={id,message:`Merge branch '${other}' into ${g.head}`,parents:[targetTip,sourceTip].filter(Boolean),
         branch:g.head,order:g.counter,lane:g.lanes[g.head]??0,merge:true};
       g.commitOrder.push(id);g.branches[g.head]=id;g.counter++;
-      say(`Merging ${other} into ${g.head}...`);say("Merge made — the two timelines are now one.","success");break;}
+      say(`Merging ${other} into ${g.head}...`);say("Merge made. The two timelines are now one.","success");break;}
     case "remote":{g.lastCmd="remote";
       if(t[2]==="add"&&t[3]==="origin"&&t[4]){g.remote={url:t[4],commitIds:[],branches:{}};
         say(`Remote "origin" added → ${t[4]}`,"success");say("origin is a nickname for your online copy.","muted");}
@@ -385,7 +386,7 @@ function runCommand(git,raw){
     case "fetch":{g.lastCmd="fetch";
       if(!g.remote){say("fatal: no remote configured.","err");break;}
       if(!g.remote.aheadCommits||g.remote.aheadCommits.length===0){say("Already up to date.","muted");break;}
-      if(g.remote.fetched){say("Already fetched — run git pull to merge.","muted");break;}
+      if(g.remote.fetched){say("Already fetched. Run git pull to merge.","muted");break;}
       g.remote.fetched=true;
       say(`From ${g.remote.url}`,"cyan");say(` * branch            main       -> FETCH_HEAD`);
       say(`Downloaded ${g.remote.aheadCommits.length} new commit(s) from origin.`,"success");
@@ -397,27 +398,44 @@ function runCommand(git,raw){
       const newTip=g.remote.aheadCommits[g.remote.aheadCommits.length-1].id;
       g.branches[g.head]=newTip;g.remote.aheadCommits=[];g.remote.fetched=false;
       say(`From ${g.remote.url}`,"cyan");say(` * branch            main       -> FETCH_HEAD`);
-      say("Fast-forward — teammate commits are now in your history.","success");break;}
+      say("Fast-forward. Teammate commits are now in your history.","success");break;}
     case "restore":{
       if(t[2]==="--staged"){g.lastCmd="restore-staged";const file=t[3];
         if(!file){say("Usage: git restore --staged <file>","err");break;}
-        if(!g.staged[file]){say(`fatal: '${file}' is not staged — nothing to unstage`,"err");break;}
+        if(!g.staged[file]){say(`fatal: '${file}' is not staged; nothing to unstage`,"err");break;}
         delete g.staged[file];g.workingFiles[file]=true;
-        say(`Unstaged ${file} — changes kept in working directory.`,"success");break;}
+        say(`Unstaged ${file}. Changes kept in working directory.`,"success");break;}
       g.lastCmd="restore";const file=t[2];
       if(!file){say("Usage: git restore <file>","err");break;}
-      if(!g.workingFiles[file]){say(`fatal: '${file}' — nothing to restore (no uncommitted changes)`,"err");break;}
+      if(!g.workingFiles[file]){say(`fatal: '${file}': nothing to restore (no uncommitted changes)`,"err");break;}
       delete g.workingFiles[file];
-      say(`Restored ${file} — discarded local changes.`,"success");break;}
+      say(`Restored ${file}. Discarded local changes.`,"success");break;}
     case "revert":{g.lastCmd="revert";
       if(t[2]!=="HEAD"){say("Only 'git revert HEAD' is supported here.","err");break;}
       const tip=g.branches[g.head];
-      if(!tip){say("fatal: nothing to revert — no commits on this branch","err");break;}
+      if(!tip){say("fatal: nothing to revert; no commits on this branch","err");break;}
       const last=g.commits[tip];const id=genHash(g.counter);
       const msg=`Revert "${last.message}"`;
       g.commits[id]={id,message:msg,parents:[tip],branch:g.head,order:g.counter,lane:g.lanes[g.head]??0};
       g.commitOrder.push(id);g.branches[g.head]=id;g.counter++;
-      say(`[${g.head} ${id}] ${msg}`,"success");say("Reverted the last commit — a new commit undoes it.","muted");break;}
+      say(`[${g.head} ${id}] ${msg}`,"success");say("Reverted the last commit. A new commit undoes it.","muted");break;}
+    case "diff":{g.lastCmd="diff";
+      const changed=Object.keys(g.workingFiles);
+      if(!changed.length){say("No changes. Working tree matches last commit.","muted");break;}
+      say("Changes not staged for commit:","coral");
+      changed.forEach(f=>say(`    modified:   ${f}`,"coral"));
+      say(`${changed.length} file(s) differ from the last commit.`,"muted");break;}
+    case "tag":{g.lastCmd="tag";if(!g.tags)g.tags={};
+      const tname=t[2];
+      if(!tname){const names=Object.keys(g.tags);
+        if(!names.length)say("(no tags yet)","muted");
+        else names.forEach(n=>say(`${n}  ->  ${g.tags[n]}`));break;}
+      const ttip=g.branches[g.head];
+      if(!ttip){say("fatal: cannot tag; no commits on this branch","err");break;}
+      if(g.tags[tname]){say(`fatal: tag '${tname}' already exists`,"err");break;}
+      g.tags[tname]=ttip;
+      say(`Tagged commit ${ttip} as '${tname}'`,"success");
+      say("A tag is a permanent label, ideal for marking releases.","muted");break;}
     default:say(`git: '${sub}' isn't covered on this isle. Type help.`,"err");
   }
   return{git:g,lines:out};
@@ -430,9 +448,9 @@ const CAMPAIGN = [
     seed:{ fresh:true, files:{ "index.html":true } },
     intro:{ kicker:"Isle I · The Forgotten Ground",
       title:"Nothing remembers",
-      body:["You step ashore and the ground is blank — not even its own past is recorded. A single file, index.html, drifts at your feet.",
+      body:["You step ashore and the ground is blank. Not even its own past is recorded. A single file, index.html, drifts at your feet.",
             "Wake the ground, gather the fragment, and seal the first memory. Three runes. Learn each, then perform it."] },
-    outro:["The first memory holds. The ground knows itself again — and somewhere east, a second isle surfaces from the tide."],
+    outro:["The first memory holds. The ground knows itself again, and somewhere east, a second isle surfaces from the tide."],
     map:[
       "~~~~~~~~~",
       "~#G#....~",
@@ -447,13 +465,13 @@ const CAMPAIGN = [
       { tile:"1", title:"Wake the ground", cmd:"git init", hint:"git init",
         story:"The folder is just a folder. Give it memory.",
         what:["A repository is a project folder that Git is watching.",
-              "git init creates a hidden .git store — Git starts recording this folder's history from now on."],
+              "git init creates a hidden .git store. Git starts recording this folder's history from now on."],
         objTxt:"Wake the repository with git init",
         check:(g)=>g.initialized,
         reward:"The ground hums awake. Git is watching now." },
       { tile:"2", title:"Gather the fragment", cmd:"git add index.html", hint:"git add index.html",
         story:"Saving is two motions. First, choose what to keep.",
-        what:["git add moves a file into the staging area — a holding zone for the next snapshot.",
+        what:["git add moves a file into the staging area, a holding zone for the next snapshot.",
               "Think of it as packing the fragment into a box before you seal it."],
         objTxt:"Stage index.html with git add",
         check:(g)=>Object.keys(g.staged).length>0 || g.lastCmd==="add",
@@ -461,13 +479,13 @@ const CAMPAIGN = [
       { tile:"3", title:"Seal the memory", cmd:'git commit -m "Add homepage"', hint:'git commit -m "Add homepage"',
         story:"Now seal the box and write its label.",
         what:["git commit records the staged changes as a permanent snapshot, with a message describing it.",
-              "Every commit is a save point you can return to — the first stone of your monument."],
+              "Every commit is a save point you can return to, the first stone of your monument."],
         objTxt:'Seal a snapshot: git commit -m "..."',
         check:(g,s)=>g.commitOrder.length>s.commits,
         reward:"A keystone memory rises on the monument.", raisesMonument:true },
     ],
     quiz:[
-      { q:"What does git add do?", options:["Permanently saves a snapshot","Stages changes so they're ready to commit","Uploads to a server","Creates a branch"], answer:1, explain:"add moves changes into the staging area — the box you're packing." },
+      { q:"What does git add do?", options:["Permanently saves a snapshot","Stages changes so they're ready to commit","Uploads to a server","Creates a branch"], answer:1, explain:"add moves changes into the staging area, the box you're packing." },
       { q:"What does git commit do?", options:["Stages a file","Saves a permanent snapshot of staged changes","Deletes history","Connects to a remote"], answer:1, explain:"commit seals the staged changes into history, with a message." },
       { q:"Which zone sits between your live files and history?", options:["The branch","The remote","The staging area","The HEAD"], answer:2, explain:"Working directory → staging area → repository." },
       { q:"What's the -m flag for?", options:["Merge","Provide the commit message","Make a branch","Mark as important"], answer:1, explain:'-m attaches the message inline: git commit -m "..."' },
@@ -478,9 +496,9 @@ const CAMPAIGN = [
     seed:{ carry:true, files:{ "about.html":true } },
     intro:{ kicker:"Isle II · The Divided Water",
       title:"A risk worth taking",
-      body:["Your repository lives, but the next repair is dangerous — change it directly and you could break what already holds.",
+      body:["Your repository lives, but the next repair is dangerous. Change it directly and you could break what already holds.",
             "So you'll split a parallel timeline, do the work safely there, then reunite it. Four runes: branch, record, return, merge."] },
-    outro:["The timelines flow back into one. The Repository stands whole — restored by your hand. You are its Keeper still."],
+    outro:["The timelines flow back into one. The Repository stands whole, restored by your hand. You are its Keeper still."],
     map:[
       "~~~~~~~~~",
       "~#G#....~",
@@ -494,29 +512,29 @@ const CAMPAIGN = [
     stations:[
       { tile:"1", title:"Open a parallel path", cmd:"git switch -c about-page", hint:"git switch -c about-page",
         story:"Don't risk the main line. Branch off into a safe 'what if'.",
-        what:["A branch is a separate line of work — an alternate timeline.",
+        what:["A branch is a separate line of work, an alternate timeline.",
               "git switch -c about-page creates a new branch and moves you onto it. New commits land here, leaving main untouched."],
         objTxt:"Create & switch to a branch (git switch -c)",
         check:(g)=>g.head!=="main",
         reward:"The water forks. You walk a parallel path." },
       { tile:"2", title:"Record on the branch", cmd:'git add about.html\ngit commit -m "Add about page"', hint:'git add about.html  →  git commit -m "Add about page"',
-        story:"You already know this rhythm: stage, then seal — here on your safe branch.",
+        story:"You already know this rhythm: stage, then seal. Here on your safe branch.",
         what:["The same two motions you learned: git add to stage, then git commit to save.",
-              "Because you're on about-page, this snapshot lands on the branch — main stays exactly as it was."],
+              "Because you're on about-page, this snapshot lands on the branch. Main stays exactly as it was."],
         objTxt:"Stage about.html, then commit it (on the branch)",
         check:(g,s)=>g.commitOrder.length>s.commits && g.head!=="main",
         reward:"A new memory forms on the parallel path.", raisesMonument:true },
       { tile:"3", title:"Return to the main line", cmd:"git switch main", hint:"git switch main",
         story:"To reunite the paths, first stand on the one you're merging into.",
         what:["git switch main hops back to your main branch.",
-              "You always merge into the branch you're currently standing on — so step onto main first."],
+              "You always merge into the branch you're currently standing on, so step onto main first."],
         objTxt:"Switch back to main (git switch main)",
         check:(g)=>g.head==="main",
         reward:"You stand on the main line again." },
       { tile:"4", title:"Reunite the timelines", cmd:"git merge about-page", hint:"git merge about-page",
         story:"Bring the parallel path home.",
         what:["git merge about-page weaves the branch's commits into main.",
-              "Git ties the two histories together with a merge commit — two rivers flowing back into one."],
+              "Git ties the two histories together with a merge commit, two rivers flowing back into one."],
         objTxt:"Merge the branch in (git merge about-page)",
         check:(g,s)=>(s.merges!=null)? (Object.values(g.commits).filter(c=>c.merge).length>s.merges) : Object.values(g.commits).some(c=>c.merge),
         reward:"The timelines reunite. The monument is crowned.", raisesMonument:true },
@@ -534,7 +552,7 @@ const CAMPAIGN = [
     seed:{ carry:true, files:{ "README.md":true } },
     intro:{ kicker:"Isle III · The Open Sky",
       title:"Give it a home",
-      body:["The Repository is whole again — but it lives only here, on this fragile shore. One more storm could unmake it.",
+      body:["The Repository is whole again, but it lives only here, on this fragile shore. One more storm could unmake it.",
             "Send it skyward to a home that never forgets: a remote on GitHub. Three runes: name the shore, seal a parting memory, then push it to the sky."] },
     outro:["Your world rises into the open sky, backed up beyond any storm. Every save point you made is safe forever. The restoration is complete, Keeper."],
     map:[
@@ -551,12 +569,12 @@ const CAMPAIGN = [
       { tile:"1", title:"Name the far shore", cmd:"git remote add origin https://github.com/keeper/world.git", hint:"git remote add origin https://github.com/keeper/world.git",
         story:"Your repository needs a home in the sky. Point it at one.",
         what:["A remote is a link to an online copy of your repo. Its usual nickname is origin.",
-              "git remote add origin <url> registers that link once — it doesn't upload anything yet."],
+              "git remote add origin <url> registers that link once. It doesn't upload anything yet."],
         objTxt:"Add the remote (git remote add origin <url>)",
         check:(g)=>g.remote!=null,
         reward:"A thread of light reaches toward the far shore." },
       { tile:"2", title:"Seal a parting memory", cmd:'git add README.md\ngit commit -m "Add README"', hint:'git add README.md  →  git commit -m "Add README"',
-        story:"One last memory before the crossing — a note for whoever finds your world.",
+        story:"One last memory before the crossing: a note for whoever finds your world.",
         what:["The same rhythm you know: git add to stage, git commit to seal.",
               "A README is a repo's front page. Commit it so it travels skyward with everything else."],
         objTxt:"Stage README.md, then commit it",
@@ -564,7 +582,7 @@ const CAMPAIGN = [
         reward:"A final keystone crowns the monument.", raisesMonument:true },
       { tile:"3", title:"Send it skyward", cmd:"git push -u origin main", hint:"git push -u origin main",
         story:"Now lift the whole history into the open sky.",
-        what:["git push uploads your commits to the remote — your repo is now backed up online.",
+        what:["git push uploads your commits to the remote. Your repo is now backed up online.",
               "The -u links your local branch to the remote one, so next time you can just type git push."],
         objTxt:"Push your work (git push -u origin main)",
         check:(g)=>g.remote && g.remote.commitIds.length>0,
@@ -583,7 +601,7 @@ const CAMPAIGN = [
     seed:{ carry:true, files:{ "index.html":true }, staged:{ "notes.txt":true } },
     intro:{ kicker:"Isle IV · The Lost Step",
       title:"Step back without fear",
-      body:["You tried to patch the world in a hurry and made it worse — an unfinished edit left dangling, the wrong file staged, and a commit that broke the gate.",
+      body:["You tried to patch the world in a hurry and made it worse: an unfinished edit left dangling, the wrong file staged, and a commit that broke the gate.",
             "Every keeper learns to step back without fear. Three runes: discard the slip, unstage the wrong file, and reverse the bad memory."] },
     outro:["The world steps back from the brink. Mistakes, you've learned, are never final in Git."],
     map:[
@@ -600,21 +618,21 @@ const CAMPAIGN = [
       { tile:"1", title:"Discard the slip", cmd:"git restore index.html", hint:"git restore index.html",
         story:"An unfinished edit drifts in your working tree. Throw it out and start clean.",
         what:["git restore <file> discards uncommitted changes in your working directory.",
-              "It brings the file back to its last committed state — no staging, no history touched."],
+              "It brings the file back to its last committed state, with no staging and no history touched."],
         objTxt:"Discard the edit: git restore index.html",
         check:(g)=>g.lastCmd==="restore" && !g.workingFiles.hasOwnProperty("index.html"),
         reward:"The slip dissolves. The file is clean again." },
       { tile:"2", title:"Unstage the wrong file", cmd:"git restore --staged notes.txt", hint:"git restore --staged notes.txt",
         story:"You staged notes.txt by mistake. Pull it back out of staging without losing the edit.",
         what:["git restore --staged <file> removes a file from the staging area.",
-              "Your local changes are kept — only the staging step is undone."],
+              "Your local changes are kept; only the staging step is undone."],
         objTxt:"Unstage the file: git restore --staged notes.txt",
         check:(g)=>!g.staged.hasOwnProperty("notes.txt"),
         reward:"The file slips back out of staging, safe in your working tree." },
       { tile:"3", title:"Reverse the bad memory", cmd:"git revert HEAD", hint:"git revert HEAD",
         story:"A commit slipped through and broke the gate. Write a new memory that undoes it.",
         what:["git revert HEAD creates a new commit that undoes the most recent one.",
-              "It never rewrites history — safe to use even on shared branches."],
+              "It never rewrites history, safe to use even on shared branches."],
         objTxt:"Reverse the commit: git revert HEAD",
         check:(g,s)=>g.commitOrder.length>s.commits,
         reward:"A healing commit rises. The gate swings open.", raisesMonument:true },
@@ -638,11 +656,11 @@ const CAMPAIGN = [
     ],
   },
   {
-    numeral:"V", name:"Isle of Distant Hands", rank:"Git Sage", guardian:"The Envoy",
+    numeral:"V", name:"Isle of Distant Hands", rank:"Collaborator", guardian:"The Envoy",
     seed:{ fresh:true, files:{} },
     intro:{ kicker:"Isle V · Distant Hands",
       title:"Learn to receive",
-      body:["You are not the only keeper. Across the water another has been shaping a shared world — origin holds memories your shore has never seen.",
+      body:["You are not the only keeper. Across the water another has been shaping a shared world; origin holds memories your shore has never seen.",
             "Learn to bring distant hands' work into your own. Three runes: mirror a world, glimpse what's new, then weave it in."] },
     outro:["Two keepers' work, now one history. The world grows faster when hands join."],
     map:[
@@ -659,7 +677,7 @@ const CAMPAIGN = [
     stations:[
       { tile:"1", title:"Mirror a far world", cmd:"git clone https://github.com/keepers/atlas.git", hint:"git clone https://github.com/keepers/atlas.git",
         story:"A teammate's world lives in the sky. Bring an exact mirror of it here.",
-        what:["git clone downloads a full repository — its files and its entire history — to your machine.",
+        what:["git clone downloads a full repository, including its files and its entire history, to your machine.",
               "After cloning you have a local copy with origin already pointing back at the source."],
         objTxt:"Clone the repo (git clone <url>)",
         check:(g)=>g.initialized && g.remote!=null,
@@ -667,13 +685,13 @@ const CAMPAIGN = [
       { tile:"2", title:"Glimpse what's new", cmd:"git fetch origin", hint:"git fetch origin",
         story:"Your teammate has pushed new work since you cloned. Download it without changing your files yet.",
         what:["git fetch downloads new commits from the remote into a holding area.",
-              "Your working files and local branch are untouched — you're just updating what Git knows about origin."],
+              "Your working files and local branch are untouched; you're just updating what Git knows about origin."],
         objTxt:"Fetch from origin (git fetch origin)",
         check:(g)=>g.remote && g.remote.fetched===true,
         reward:"New memories shimmer just beyond your branch." },
       { tile:"3", title:"Weave it in", cmd:"git pull origin main", hint:"git pull origin main",
         story:"The distant hands' work is within reach. Weave their commits into your branch.",
-        what:["git pull is fetch + merge in one step — it downloads and immediately integrates the remote commits.",
+        what:["git pull is fetch + merge in one step; it downloads and immediately integrates the remote commits.",
               "After pulling, your local history includes your teammate's work. Two lines become one."],
         objTxt:"Pull the remote work in (git pull origin main)",
         check:(g,s)=>g.commitOrder.length>s.commits,
@@ -687,7 +705,7 @@ const CAMPAIGN = [
         options:["No difference","fetch downloads remote changes without merging; pull fetches AND merges","fetch deletes commits; pull restores them","pull is offline, fetch is online"],
         answer:1, explain:"fetch is the safe look; pull brings the changes into your branch." },
       { q:"After `git fetch`, are your working files changed?",
-        options:["Yes, immediately","No — fetch only updates remote-tracking branches; you merge separately","Only on main","The repo is deleted"],
+        options:["Yes, immediately","No. Fetch only updates remote-tracking branches; you merge separately","Only on main","The repo is deleted"],
         answer:1, explain:"fetch updates what Git knows about the remote; your files change only when you merge." },
       { q:"`git pull` is equivalent to…",
         options:["git add + git commit","git fetch followed by git merge","git push in reverse","git init + git remote add"],
@@ -697,8 +715,68 @@ const CAMPAIGN = [
         answer:1, explain:"fetch lets you inspect what changed before integrating it." },
     ],
   },
+  {
+    numeral:"VI", name:"Isle of the Long Memory", rank:"Git Sage", guardian:"The Loremaster",
+    seed:{ files:{ "journal.md":true } },
+    intro:{ kicker:"Isle VI · The Long Memory",
+      title:"Read the chronicle",
+      body:["The Repository is whole. Before you rest, learn to read its long memory and mark this moment for those who come after.",
+            "Three runes: read the chronicle, see what changed, and name this triumph."] },
+    outro:["The chronicle is read, the milestone named. You are no longer a wanderer. You are a Git Sage. Every save, branch, merge, undo, and shared step is yours to wield."],
+    map:[
+      "~~~~~~~~~",
+      "~#G#....~",
+      "~.g.....~",
+      "~....1..~",
+      "~...M...~",
+      "~....2..~",
+      "~..x....~",
+      "~..S.3..~",
+      "~~~~~~~~~",
+    ],
+    stations:[
+      { tile:"1", title:"Read the chronicle", cmd:"git log", hint:"git log",
+        story:"The Repository holds every decision ever made. Call up its history.",
+        what:["git log shows the full timeline of commits: who made each change, when, and with what message.",
+              "Every commit is a breadcrumb: follow them back and you can rebuild the entire story of the project."],
+        objTxt:"Read the repository history (git log)",
+        check:(g)=>g.lastCmd==="log",
+        reward:"The long memory unfurls. Every commit, every moment, made visible." },
+      { tile:"2", title:"See what changed", cmd:"git diff", hint:"git diff",
+        story:"A file has drifted from the last snapshot. Reveal exactly what changed.",
+        what:["git diff compares your working files against the last commit, showing added lines (+) and removed lines (−).",
+              "Before staging anything, diff is your mirror. It shows the precise shape of every change."],
+        objTxt:"Inspect the working changes (git diff)",
+        check:(g)=>g.lastCmd==="diff",
+        reward:"The changes glow clear. Nothing is hidden from the long memory." },
+      { tile:"3", title:"Name this triumph", cmd:"git tag v1.0", hint:"git tag v1.0",
+        story:"The Repository is restored. Mark this commit so the world remembers where the journey ended.",
+        what:["git tag attaches a permanent label to a commit.",
+              "Version tags like v1.0 let teams pinpoint releases: you can always return to this exact moment."],
+        objTxt:"Tag this commit as v1.0 (git tag v1.0)",
+        check:(g)=>g.tags && g.tags["v1.0"]!=null,
+        reward:"v1.0 is sealed into the chronicle. The monument rises.", raisesMonument:true },
+    ],
+    quiz:[
+      { q:"What does `git log` show?",
+        options:["The files in your folder","The history of commits, showing who changed what and when","Your remote URL","The staging area only"],
+        answer:1, explain:"log is the project's timeline of commits." },
+      { q:"What does `git diff` show?",
+        options:["The size of the repo","The changes between versions of your files","A list of branches","Your git version"],
+        answer:1, explain:"diff reveals exactly what changed." },
+      { q:"What is a git tag?",
+        options:["A type of branch you commit to","A label marking a specific commit, often a release version","A remote server","A merge conflict"],
+        answer:1, explain:"Tags name important commits, like v1.0." },
+      { q:"Why is `git log --oneline` handy?",
+        options:["It deletes old commits","It shows a compact, one-line-per-commit summary","It pushes to origin","It creates a tag"],
+        answer:1, explain:"--oneline condenses each commit to a single readable line." },
+      { q:"A tag like `v1.0` usually marks…",
+        options:["A bug","A release or milestone commit","An untracked file","A remote branch"],
+        answer:1, explain:"Teams tag releases so they can find them later." },
+    ],
+  },
 ];
-const RANKS = ["Wanderer","Apprentice","Committer","Merge Master","Remote Rider","Mender","Git Sage"];
+const RANKS = ["Wanderer","Apprentice","Committer","Merge Master","Remote Rider","Mender","Collaborator","Git Sage"];
 
 /* ---------------- 3. SCENE SINGLETONS ---------------- */
 const C = { monument:0xf0d090, monumentEdge:0xf6c64e,
@@ -734,6 +812,11 @@ const PALETTES = [
     fog:0xc07860, hemiSky:0xffe8a8, hemiGround:0x6a2840, key:0xffe4a0,
     base:{top:0xb05840, side:0x8a4030}, rim:0xd07050,
     tile:{top:0xf5e0c0, top2:0xfae8cc, side:0xe5d0a8} },
+  { /* VI — Regal Twilight (deep indigo-to-gold finale) */
+    sky:"radial-gradient(125% 100% at 75% 8%, #f5d060 0%, #c09040 20%, #7a50a0 52%, #1e1640 100%)",
+    fog:0x2a2060, hemiSky:0xb0a0d8, hemiGround:0x18103a, key:0xffd87a,
+    base:{top:0x4a3880, side:0x352870}, rim:0xd4a820,
+    tile:{top:0xf0e8c8, top2:0xf8f0d5, side:0xe0d4a8} },
 ];
 const TILE=1;
 const canvas=document.getElementById("scene");
@@ -982,7 +1065,7 @@ function onArrive(tile){
     const si=tile.stationIndex;
     if(IS.complete){ toast("Every rune is restored. The guardian waits east."); }
     else if(si<IS.activeStation){ toast("This rune is already restored."); }
-    else if(si>IS.activeStation){ toast("This rune is still dormant — restore the one glowing first."); }
+    else if(si>IS.activeStation){ toast("This rune is still dormant. Restore the one glowing first."); }
     else openStation(si);
   } else if(tile===IS.gateTile&&IS.gateOpen){ startBoss(); }
   if(IS.loreTile){const dl=Math.abs(tile.c-IS.loreTile.c)+Math.abs(tile.r-IS.loreTile.r);
@@ -1078,7 +1161,7 @@ function toConsole(){
   panel.classList.remove("mode-teach"); panel.classList.add("mode-console");
   stationSnap={ commits:git.commitOrder.length, head:git.head, merges:Object.values(git.commits).filter(c=>c.merge).length };
   if(!pScroll.childElementCount){
-    pushP([L("This rune accepts real Git. Type the command — or 'help'.","muted")]);
+    pushP([L("This rune accepts real Git. Type the command, or type 'help'.","muted")]);
   }
   setTimeout(()=>pInput.focus(),180);
 }
@@ -1188,7 +1271,7 @@ function showResult(win){
     if(isLast){
       kick.textContent="The voyage is complete";
       title.textContent="The Repository is whole.";
-      sub.textContent=data.outro[0]+" You've learned to save, branch, merge, and back up real work — that's the everyday craft of Git.";
+      sub.textContent=data.outro[0]+" You've learned to save, branch, merge, and back up real work. That's the everyday craft of Git.";
       recap.innerHTML=`<span class="chip gold">✦ All ${CAMPAIGN.length} isles restored</span><span class="chip gold">${totalScore} pts total</span>
         <span class="chip">Rank · ${RANKS[progressRank]}</span>`;
       cta.textContent="Set sail again ▸";
@@ -1199,7 +1282,7 @@ function showResult(win){
   } else {
     kick.textContent="The trial continues";
     title.textContent=data.guardian+" still stands.";
-    sub.textContent="Your hearts ran out — but the knowledge sticks. Steady your timing and face it again.";
+    sub.textContent="Your hearts ran out, but the knowledge sticks. Steady your timing and face it again.";
     recap.innerHTML=`<span class="chip">${runScore} pts</span><span class="chip">Best streak ×${bestStreak}</span>`;
     cta.textContent="Face "+data.guardian+" again";
     resultAction=()=>{ hideVeil(elResult); resultOpen=false; startBoss(); };

@@ -47,6 +47,12 @@ const ISLE_CMDS = [
     ['git fetch origin'],
     ['git pull origin main'],
   ],
+  // Isle VI  (3 stations)
+  [
+    ['git log'],
+    ['git diff'],
+    ['git tag v1.0'],
+  ],
 ];
 
 // ── BOOT + EXPORT ─────────────────────────────────────────────────────────────
@@ -96,8 +102,8 @@ function pass(msg) { console.log('PASS:', msg); }
 function fail(msg) { console.log('FAIL:', msg); failed = true; }
 
 // 1. CAMPAIGN sanity
-if (Array.isArray(CAMPAIGN) && CAMPAIGN.length === 5) {
-  pass('CAMPAIGN has 5 islands');
+if (Array.isArray(CAMPAIGN) && CAMPAIGN.length === 6) {
+  pass('CAMPAIGN has 6 islands');
 } else {
   fail(`CAMPAIGN length is ${Array.isArray(CAMPAIGN) ? CAMPAIGN.length : typeof CAMPAIGN}`);
 }
@@ -126,7 +132,7 @@ if (Array.isArray(CAMPAIGN) && CAMPAIGN.length === 5) {
 }
 
 // ── Campaign helpers ───────────────────────────────────────────────────────────
-const NUMERALS = ['I', 'II', 'III', 'IV', 'V'];
+const NUMERALS = ['I', 'II', 'III', 'IV', 'V', 'VI'];
 
 function playStations(i) {
   console.log(`\n── Isle ${NUMERALS[i]} stations ──`);
@@ -214,6 +220,17 @@ else                        fail(`currentIsle is ${getCurrentIsle()}, expected 4
 // Isle V
 playStations(4);
 playBoss(4);
+
+// Transition V → VI
+console.log('\n── transition V → VI ──');
+getResultAction()();          // loadIsland(5)
+setStoryOpen(false); setStarted(true);
+if (getCurrentIsle() === 5) pass('currentIsle → 5 (Isle VI)');
+else                        fail(`currentIsle is ${getCurrentIsle()}, expected 5`);
+
+// Isle VI
+playStations(5);
+playBoss(5);
 
 // Victory
 console.log('\n── victory ──');
