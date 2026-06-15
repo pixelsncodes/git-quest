@@ -291,6 +291,7 @@ function runCommand(git,raw){
     say('  git init · git status · git add <file> · git commit -m "msg"');
     say("  git log · git branch · git switch -c <name> · git switch <name> · git merge <name>");
     say("  git restore <file> · git restore --staged <file> · git revert HEAD");
+    say("  git clone <url> · git fetch [origin] · git pull [origin] [branch]");
     say("  ls · clear");return{git,lines:out};}
   const g=clone(git);
   if(t[0]==="ls"){const all=[...Object.keys(g.workingFiles),...Object.keys(g.staged)];
@@ -303,6 +304,23 @@ function runCommand(git,raw){
     if(g.initialized)say("Reinitialized existing Git repository in /world/.git/");
     else{g.initialized=true;say("Initialized empty Git repository in /world/.git/","success");say("Git is now watching this folder.","muted");}
     g.lastCmd="init";return{git:g,lines:out};}
+  if(sub==="clone"){g.lastCmd="clone";const url=t[2];
+    if(!url){say("Usage: git clone <url>","err");return{git,lines:out};}
+    if(g.initialized){say("fatal: destination path '.' already exists and is not empty","err");return{git,lines:out};}
+    g.initialized=true;
+    const b0=genHash(g.counter++);
+    g.commits[b0]={id:b0,message:"Initial project setup",parents:[],branch:"main",order:0,lane:0};
+    g.commitOrder.push(b0);g.branches["main"]=b0;
+    const a1=genHash(g.counter++),a2=genHash(g.counter++);
+    const ahead=[
+      {id:a1,message:"Add collaboration guide",parents:[b0],branch:"main",order:1,lane:0},
+      {id:a2,message:"Update README for new contributors",parents:[a1],branch:"main",order:2,lane:0}
+    ];
+    g.remote={url,commitIds:[b0,a1,a2],branches:{main:a2},aheadCommits:ahead,fetched:false};
+    say(`Cloning from ${url}...`,"cyan");say("remote: Counting objects: 3, done.","muted");
+    say("Cloned into /world/ — your teammate has 2 commits you don't have yet.","success");
+    say("Run git fetch to download them, then git pull to merge them in.","muted");
+    return{git:g,lines:out};}
   if(!g.initialized){say("fatal: not a git repository","err");say('Run "git init" first to create one.',"muted");return{git,lines:out};}
   switch(sub){
     case "status":{g.lastCmd="status";say(`On branch ${g.head}`,"cyan");
@@ -364,6 +382,22 @@ function runCommand(git,raw){
       let cur=tip;const ids=[];while(cur){ids.push(cur);cur=g.commits[cur].parents[0];}
       g.remote.commitIds=Array.from(new Set([...g.remote.commitIds,...ids]));g.remote.branches[g.head]=tip;
       say(`To ${g.remote.url}`);say(` * ${g.head} -> ${g.head}`,"success");break;}
+    case "fetch":{g.lastCmd="fetch";
+      if(!g.remote){say("fatal: no remote configured.","err");break;}
+      if(!g.remote.aheadCommits||g.remote.aheadCommits.length===0){say("Already up to date.","muted");break;}
+      if(g.remote.fetched){say("Already fetched — run git pull to merge.","muted");break;}
+      g.remote.fetched=true;
+      say(`From ${g.remote.url}`,"cyan");say(` * branch            main       -> FETCH_HEAD`);
+      say(`Downloaded ${g.remote.aheadCommits.length} new commit(s) from origin.`,"success");
+      say("Your local branch is unchanged. Run git pull to integrate.","muted");break;}
+    case "pull":{g.lastCmd="pull";
+      if(!g.remote){say("fatal: no remote configured.","err");break;}
+      if(!g.remote.aheadCommits||g.remote.aheadCommits.length===0){say("Already up to date.","muted");break;}
+      g.remote.aheadCommits.forEach(c=>{g.commits[c.id]=c;g.commitOrder.push(c.id);});
+      const newTip=g.remote.aheadCommits[g.remote.aheadCommits.length-1].id;
+      g.branches[g.head]=newTip;g.remote.aheadCommits=[];g.remote.fetched=false;
+      say(`From ${g.remote.url}`,"cyan");say(` * branch            main       -> FETCH_HEAD`);
+      say("Fast-forward — teammate commits are now in your history.","success");break;}
     case "restore":{
       if(t[2]==="--staged"){g.lastCmd="restore-staged";const file=t[3];
         if(!file){say("Usage: git restore --staged <file>","err");break;}
@@ -545,7 +579,7 @@ const CAMPAIGN = [
     ],
   },
   {
-    numeral:"IV", name:"Isle of the Lost Step", rank:"Git Sage", guardian:"The Warden of Second Chances",
+    numeral:"IV", name:"Isle of the Lost Step", rank:"Mender", guardian:"The Warden of Second Chances",
     seed:{ carry:true, files:{ "index.html":true }, staged:{ "notes.txt":true } },
     intro:{ kicker:"Isle IV · The Lost Step",
       title:"Step back without fear",
@@ -603,8 +637,68 @@ const CAMPAIGN = [
         answer:1, explain:"revert doesn't rewrite existing history, so it won't disrupt others." },
     ],
   },
+  {
+    numeral:"V", name:"Isle of Distant Hands", rank:"Git Sage", guardian:"The Envoy",
+    seed:{ fresh:true, files:{} },
+    intro:{ kicker:"Isle V · Distant Hands",
+      title:"Learn to receive",
+      body:["You are not the only keeper. Across the water another has been shaping a shared world — origin holds memories your shore has never seen.",
+            "Learn to bring distant hands' work into your own. Three runes: mirror a world, glimpse what's new, then weave it in."] },
+    outro:["Two keepers' work, now one history. The world grows faster when hands join."],
+    map:[
+      "~~~~~~~~~",
+      "~#G#....~",
+      "~.g.....~",
+      "~.1.....~",
+      "~...M...~",
+      "~.2..3..~",
+      "~...x...~",
+      "~...S...~",
+      "~~~~~~~~~",
+    ],
+    stations:[
+      { tile:"1", title:"Mirror a far world", cmd:"git clone https://github.com/keepers/atlas.git", hint:"git clone https://github.com/keepers/atlas.git",
+        story:"A teammate's world lives in the sky. Bring an exact mirror of it here.",
+        what:["git clone downloads a full repository — its files and its entire history — to your machine.",
+              "After cloning you have a local copy with origin already pointing back at the source."],
+        objTxt:"Clone the repo (git clone <url>)",
+        check:(g)=>g.initialized && g.remote!=null,
+        reward:"A mirror of the far world settles at your feet." },
+      { tile:"2", title:"Glimpse what's new", cmd:"git fetch origin", hint:"git fetch origin",
+        story:"Your teammate has pushed new work since you cloned. Download it without changing your files yet.",
+        what:["git fetch downloads new commits from the remote into a holding area.",
+              "Your working files and local branch are untouched — you're just updating what Git knows about origin."],
+        objTxt:"Fetch from origin (git fetch origin)",
+        check:(g)=>g.remote && g.remote.fetched===true,
+        reward:"New memories shimmer just beyond your branch." },
+      { tile:"3", title:"Weave it in", cmd:"git pull origin main", hint:"git pull origin main",
+        story:"The distant hands' work is within reach. Weave their commits into your branch.",
+        what:["git pull is fetch + merge in one step — it downloads and immediately integrates the remote commits.",
+              "After pulling, your local history includes your teammate's work. Two lines become one."],
+        objTxt:"Pull the remote work in (git pull origin main)",
+        check:(g,s)=>g.commitOrder.length>s.commits,
+        reward:"Two histories weave into one. The monument rises.", raisesMonument:true },
+    ],
+    quiz:[
+      { q:"What does `git clone` do?",
+        options:["Copies an existing repository (with its history) to your machine","Deletes a remote repo","Creates an empty file","Renames the current branch"],
+        answer:0, explain:"clone downloads a full repo so you can work on it locally." },
+      { q:"Difference between `git fetch` and `git pull`?",
+        options:["No difference","fetch downloads remote changes without merging; pull fetches AND merges","fetch deletes commits; pull restores them","pull is offline, fetch is online"],
+        answer:1, explain:"fetch is the safe look; pull brings the changes into your branch." },
+      { q:"After `git fetch`, are your working files changed?",
+        options:["Yes, immediately","No — fetch only updates remote-tracking branches; you merge separately","Only on main","The repo is deleted"],
+        answer:1, explain:"fetch updates what Git knows about the remote; your files change only when you merge." },
+      { q:"`git pull` is equivalent to…",
+        options:["git add + git commit","git fetch followed by git merge","git push in reverse","git init + git remote add"],
+        answer:1, explain:"pull = fetch + merge in one command." },
+      { q:"Why might you prefer `git fetch` over `git pull`?",
+        options:["It's faster to type","To review incoming changes before merging them","fetch needs no internet","pull doesn't work on main"],
+        answer:1, explain:"fetch lets you inspect what changed before integrating it." },
+    ],
+  },
 ];
-const RANKS = ["Wanderer","Apprentice","Committer","Merge Master","Remote Rider","Git Sage"];
+const RANKS = ["Wanderer","Apprentice","Committer","Merge Master","Remote Rider","Mender","Git Sage"];
 
 /* ---------------- 3. SCENE SINGLETONS ---------------- */
 const C = { monument:0xf0d090, monumentEdge:0xf6c64e,
@@ -635,6 +729,11 @@ const PALETTES = [
     fog:0x7a7098, hemiSky:0xd8c8a8, hemiGround:0x2e2848, key:0xfff4d0,
     base:{top:0x5a5480, side:0x403c5e}, rim:0xd07838,
     tile:{top:0xf0e0c0, top2:0xf7e8cc, side:0xe0cdb0} },
+  { /* V — Social Sunrise (gold-to-rose, warm and welcoming) */
+    sky:"radial-gradient(125% 100% at 78% 6%, #ffd580 0%, #ff9e6d 30%, #e06070 62%, #8a3060 100%)",
+    fog:0xc07860, hemiSky:0xffe8a8, hemiGround:0x6a2840, key:0xffe4a0,
+    base:{top:0xb05840, side:0x8a4030}, rim:0xd07050,
+    tile:{top:0xf5e0c0, top2:0xfae8cc, side:0xe5d0a8} },
 ];
 const TILE=1;
 const canvas=document.getElementById("scene");

@@ -14,7 +14,7 @@ if (!lastInline) { console.error('No inline script found'); process.exit(1); }
 // ── ISLE SOLVING COMMANDS ────────────────────────────────────────────────────
 // One entry per station; each is an array of commands (multi-cmd stations list
 // all in order). Verified against each station's check() in CAMPAIGN.
-// To add Isle IV–VI: append one entry here.
+// To add Isle VI: append one entry here.
 const ISLE_CMDS = [
   // Isle I  (3 stations)
   [
@@ -40,6 +40,12 @@ const ISLE_CMDS = [
     ['git restore index.html'],
     ['git restore --staged notes.txt'],
     ['git revert HEAD'],
+  ],
+  // Isle V  (3 stations)
+  [
+    ['git clone https://github.com/keepers/atlas.git'],
+    ['git fetch origin'],
+    ['git pull origin main'],
   ],
 ];
 
@@ -90,8 +96,8 @@ function pass(msg) { console.log('PASS:', msg); }
 function fail(msg) { console.log('FAIL:', msg); failed = true; }
 
 // 1. CAMPAIGN sanity
-if (Array.isArray(CAMPAIGN) && CAMPAIGN.length === 4) {
-  pass('CAMPAIGN has 4 islands');
+if (Array.isArray(CAMPAIGN) && CAMPAIGN.length === 5) {
+  pass('CAMPAIGN has 5 islands');
 } else {
   fail(`CAMPAIGN length is ${Array.isArray(CAMPAIGN) ? CAMPAIGN.length : typeof CAMPAIGN}`);
 }
@@ -120,7 +126,7 @@ if (Array.isArray(CAMPAIGN) && CAMPAIGN.length === 4) {
 }
 
 // ── Campaign helpers ───────────────────────────────────────────────────────────
-const NUMERALS = ['I', 'II', 'III', 'IV'];
+const NUMERALS = ['I', 'II', 'III', 'IV', 'V'];
 
 function playStations(i) {
   console.log(`\n── Isle ${NUMERALS[i]} stations ──`);
@@ -198,14 +204,26 @@ else                        fail(`currentIsle is ${getCurrentIsle()}, expected 3
 playStations(3);
 playBoss(3);
 
+// Transition IV → V
+console.log('\n── transition IV → V ──');
+getResultAction()();          // loadIsland(4)
+setStoryOpen(false); setStarted(true);
+if (getCurrentIsle() === 4) pass('currentIsle → 4 (Isle V)');
+else                        fail(`currentIsle is ${getCurrentIsle()}, expected 4`);
+
+// Isle V
+playStations(4);
+playBoss(4);
+
 // Victory
 console.log('\n── victory ──');
-if (getResultOpen())                              pass('result screen open after final boss');
-else                                              fail('result screen NOT open after final boss');
+if (getResultOpen())                         pass('result screen open after final boss');
+else                                         fail('result screen NOT open after final boss');
 const ctaText = global.document.getElementById('resCta').textContent;
-if (ctaText === 'Set sail again ▸')          pass('victory CTA: "Set sail again ▸"');
-else                                              fail(`victory CTA: "${ctaText}"`);
-if (getCurrentIsle() === 3)                       pass('currentIsle is 3 (final, pre-restart)');
-else                                              fail(`currentIsle is ${getCurrentIsle()}, expected 3`);
+if (ctaText === 'Set sail again ▸')         pass('victory CTA: "Set sail again ▸"');
+else                                         fail(`victory CTA: "${ctaText}"`);
+const lastIdx = CAMPAIGN.length - 1;
+if (getCurrentIsle() === lastIdx)            pass(`currentIsle is ${lastIdx} (final, pre-restart)`);
+else                                         fail(`currentIsle is ${getCurrentIsle()}, expected ${lastIdx}`);
 
 process.exit(failed ? 1 : 0);
