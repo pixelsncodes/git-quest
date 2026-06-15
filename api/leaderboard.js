@@ -14,8 +14,10 @@ const KEY = "gitquest:leaderboard";
 const MAX_NAME = 18;
 
 function getRedis() {
-  // Throws if env vars are missing — handled below so the client can fall back.
-  return Redis.fromEnv();
+  const url = process.env.KV_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL;
+  const token = process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN;
+  if (!url || !token) throw new Error("Redis env vars not set");
+  return new Redis({ url, token });
 }
 
 async function topRows(redis, limit) {
