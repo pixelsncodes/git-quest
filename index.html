@@ -12,7 +12,7 @@
     --body:-apple-system,BlinkMacSystemFont,'Segoe UI',Inter,system-ui,sans-serif;
   }
   *{box-sizing:border-box;margin:0;padding:0}
-  html,body{height:100%;overflow:hidden;background:#7c72ab}
+  html,body{width:100%;height:100%;min-height:100dvh;overflow:hidden;background:#7c72ab}
   body{font-family:var(--body);color:var(--cream);-webkit-font-smoothing:antialiased;touch-action:manipulation}
 
   #sky{position:fixed;inset:0;z-index:0;background:
@@ -20,10 +20,10 @@
       transition:background .8s ease}
   #sky::after{content:"";position:absolute;inset:0;mix-blend-mode:screen;opacity:.5;
       background:radial-gradient(55% 40% at 80% 16%, rgba(255,247,233,.5), transparent 62%)}
-  #scene{position:fixed;inset:0;z-index:1;display:block}
+  #scene{position:fixed;inset:0;width:100vw;height:100dvh;z-index:1;display:block}
 
   /* HUD */
-  #hud{position:fixed;inset:0;z-index:5;pointer-events:none;display:flex;flex-direction:column;justify-content:space-between}
+  #hud{position:fixed;inset:0;width:100vw;height:100dvh;z-index:5;pointer-events:none;display:flex;flex-direction:column;justify-content:space-between}
   .hud-top{display:flex;justify-content:space-between;align-items:flex-start;padding:18px 20px;gap:12px}
   .crest .eyebrow{font-family:var(--mono);font-size:.64rem;letter-spacing:.22em;text-transform:uppercase;
       color:rgba(251,243,231,.74);text-shadow:0 1px 6px rgba(44,36,64,.5)}
@@ -162,6 +162,25 @@
   #toast.show{opacity:1;transform:translate(-50%,0)}
   #toast .em{color:var(--gold)}
 
+  @media(max-width:900px){
+    .hud-top{padding:14px 16px;gap:10px}
+    .crest .eyebrow{font-size:.58rem;letter-spacing:.18em}
+    .crest h1{font-size:clamp(1.02rem,5.2vw,1.25rem)}
+    .rank{border-radius:12px;padding:8px 11px}
+    .rank .k{font-size:.5rem}
+    .rank .v{font-size:.92rem}
+    .runes{gap:5px;margin-top:6px}
+    .runedot{width:8px;height:8px}
+    .hud-foot{padding:0 12px calc(12px + env(safe-area-inset-bottom))}
+    .pill{max-width:min(92vw,420px);padding:10px 16px;font-size:.82rem;line-height:1.3}
+    #panel{width:min(640px,96vw)}
+    .scroll{height:min(178px,32dvh)}
+  }
+  @media(max-width:420px){
+    .hud-top{padding:12px 12px}
+    .rank{padding:7px 10px}
+    .pill{font-size:.78rem}
+  }
   @media(prefers-reduced-motion:reduce){*{animation-duration:.001ms!important;transition-duration:.08s!important}}
 </style>
 
@@ -560,6 +579,7 @@ renderer.outputEncoding=THREE.sRGBEncoding;
 const scene=new THREE.Scene();
 scene.fog=new THREE.Fog(0x8a7fb5,17,32);
 const VIEW=7.2;
+const MIN_PLAY_WIDTH=10.5;
 const camera=new THREE.OrthographicCamera(-VIEW,VIEW,VIEW,-VIEW,0.1,100);
 camera.position.set(11,12,11);camera.lookAt(0,0,0);
 const hemi=new THREE.HemisphereLight(0xffd9c0,0x4a3b63,0.5); scene.add(hemi);
@@ -855,9 +875,28 @@ function animate(){
   }
   renderer.render(scene,camera);
 }
-function resize(){ const w=innerWidth,h=innerHeight; renderer.setSize(w,h,false);
-  const a=w/h, v=VIEW*(h<560?1.18:1); camera.left=-v*a;camera.right=v*a;camera.top=v;camera.bottom=-v;camera.updateProjectionMatrix(); }
-addEventListener("resize",resize); resize(); animate();
+function viewportSize(){
+  const vv=window.visualViewport;
+  return {
+    w:Math.max(1,Math.round((vv&&vv.width)||innerWidth)),
+    h:Math.max(1,Math.round((vv&&vv.height)||innerHeight))
+  };
+}
+function resize(){
+  const {w,h}=viewportSize();
+  renderer.setSize(w,h,false);
+  const a=w/h;
+  const compactBoost=h<760?1.08:1;
+  let halfH=VIEW*compactBoost;
+  let halfW=halfH*a;
+  const minHalfW=(a<1?MIN_PLAY_WIDTH:VIEW*2)/2;
+  if(halfW<minHalfW){ halfW=minHalfW; halfH=halfW/a; }
+  camera.left=-halfW;camera.right=halfW;camera.top=halfH;camera.bottom=-halfH;
+  camera.updateProjectionMatrix();
+}
+addEventListener("resize",resize);
+if(window.visualViewport) visualViewport.addEventListener("resize",resize);
+resize(); animate();
 
 function growMonument(){
   const i=IS.tiers.length; const w=0.7-i*0.06;
