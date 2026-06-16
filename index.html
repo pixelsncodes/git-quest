@@ -818,6 +818,74 @@ const PALETTES = [
     base:{top:0x4a3880, side:0x352870}, rim:0xd4a820,
     tile:{top:0xf0e8c8, top2:0xf8f0d5, side:0xe0d4a8} },
 ];
+
+/* per-island guardian spec: shape id + emissive base color */
+const GUARDIANS = [
+  {shape:"crystal", color:0x2bb3a3},  // I   teal
+  {shape:"fork",    color:0x2f6fd6},  // II  ocean blue
+  {shape:"spire",   color:0x6b8fb5},  // III steel blue
+  {shape:"warden",  color:0xe0772f},  // IV  ember
+  {shape:"envoy",   color:0xd9657f},  // V   rose
+  {shape:"owl",     color:0x6f51bd},  // VI  violet  (gold eyes 0xd4a64a)
+];
+function gDim(c){const r=((c>>16)&255)*0.60|0,g=((c>>8)&255)*0.60|0,b=(c&255)*0.60|0;return(r<<16)|(g<<8)|b;}
+function gHi(c){const r=Math.min(255,((c>>16)&255)*1.45|0),g=Math.min(255,((c>>8)&255)*1.45|0),b=Math.min(255,(c&255)*1.45|0);return(r<<16)|(g<<8)|b;}
+function buildGuardian(shape,color,grp){
+  const mat=new THREE.MeshStandardMaterial({color:gDim(color),emissive:color,emissiveIntensity:.06,roughness:.45,flatShading:true});
+  let core=null,base=null,shards=[],eyes=[],eyeMat=null;
+  if(shape==="crystal"){
+    core=new THREE.Mesh(new THREE.OctahedronGeometry(0.38,0),mat);core.position.y=0.82;core.castShadow=true;grp.add(core);
+    base=new THREE.Mesh(new THREE.ConeGeometry(0.42,0.9,6),mat);base.position.y=0.4;base.castShadow=true;grp.add(base);
+    for(let i=0;i<5;i++){const s=new THREE.Mesh(new THREE.TetrahedronGeometry(0.15),mat);const a=(i/5)*Math.PI*2;
+      s.position.set(Math.cos(a)*0.52,0.82+Math.sin(a*2)*0.16,Math.sin(a)*0.52);grp.add(s);shards.push(s);}
+  } else if(shape==="owl"){
+    const body=new THREE.Mesh(new THREE.SphereGeometry(0.32,8,6),mat);body.position.y=0.42;body.scale.set(1,1.15,1);body.castShadow=true;grp.add(body);
+    const head=new THREE.Mesh(new THREE.SphereGeometry(0.22,7,5),mat);head.position.y=0.90;head.castShadow=true;grp.add(head);
+    [[-0.10,1.10,0.02],[0.10,1.10,0.02]].forEach(([ox,oy,oz])=>{const ear=new THREE.Mesh(new THREE.ConeGeometry(0.075,0.22,4),mat);
+      ear.position.set(ox,oy,oz);grp.add(ear);});
+    eyeMat=new THREE.MeshStandardMaterial({color:0xd4a64a,emissive:0xd4a64a,emissiveIntensity:.70,roughness:.3});
+    [[-0.09,0.92,0.19],[0.09,0.92,0.19]].forEach(([ox,oy,oz])=>{const eye=new THREE.Mesh(new THREE.SphereGeometry(0.055,5,4),eyeMat);
+      eye.position.set(ox,oy,oz);grp.add(eye);eyes.push(eye);});
+    core=body;
+  } else if(shape==="fork"){
+    // Short trunk splitting into two upward prongs — Y / tuning-fork silhouette
+    const trunk=new THREE.Mesh(new THREE.CylinderGeometry(0.08,0.10,0.55,6),mat);
+    trunk.position.y=0.38;trunk.castShadow=true;grp.add(trunk);
+    const pL=new THREE.Mesh(new THREE.ConeGeometry(0.07,0.44,5),mat);
+    pL.position.set(-0.17,0.82,0);pL.rotation.z=0.38;pL.castShadow=true;grp.add(pL);
+    const pR=new THREE.Mesh(new THREE.ConeGeometry(0.07,0.44,5),mat);
+    pR.position.set( 0.17,0.82,0);pR.rotation.z=-0.38;pR.castShadow=true;grp.add(pR);
+    core=trunk;
+  } else if(shape==="spire"){
+    // Tall central spire with two flat angled wings
+    core=new THREE.Mesh(new THREE.ConeGeometry(0.14,1.05,6),mat);
+    core.position.y=0.68;core.castShadow=true;grp.add(core);
+    [[-0.30,0.42,-0.04,0.22],[0.30,0.42,-0.04,-0.22]].forEach(([ox,oy,oz,rz])=>{
+      const w=new THREE.Mesh(new THREE.BoxGeometry(0.42,0.06,0.24),mat);
+      w.position.set(ox,oy,oz);w.rotation.z=rz;w.castShadow=true;grp.add(w);});
+  } else if(shape==="warden"){
+    // Broad armored cylinder body + peaked dome + lighter shield plate
+    const body=new THREE.Mesh(new THREE.CylinderGeometry(0.30,0.34,0.60,8),mat);
+    body.position.y=0.40;body.castShadow=true;grp.add(body);
+    const dome=new THREE.Mesh(new THREE.ConeGeometry(0.28,0.36,8),mat);
+    dome.position.y=0.82;dome.castShadow=true;grp.add(dome);
+    const shieldMat=new THREE.MeshStandardMaterial({color:gHi(color),emissive:color,emissiveIntensity:.08,roughness:.45,flatShading:true});
+    const shield=new THREE.Mesh(new THREE.BoxGeometry(0.34,0.40,0.06),shieldMat);
+    shield.position.set(0,0.44,0.34);shield.castShadow=true;grp.add(shield);
+    core=body;
+  } else if(shape==="envoy"){
+    // Slender tapered body + sphere head + floating orb accent
+    const body=new THREE.Mesh(new THREE.ConeGeometry(0.12,0.72,7),mat);
+    body.position.y=0.46;body.castShadow=true;grp.add(body);
+    const head=new THREE.Mesh(new THREE.SphereGeometry(0.16,6,5),mat);
+    head.position.y=0.92;head.castShadow=true;grp.add(head);
+    const orbMat=new THREE.MeshStandardMaterial({color:gHi(color),emissive:color,emissiveIntensity:.18,roughness:.35,flatShading:true});
+    const orb=new THREE.Mesh(new THREE.SphereGeometry(0.12,6,5),orbMat);
+    orb.position.set(0.38,0.88,0);orb.castShadow=true;grp.add(orb);
+    eyes=[orb]; eyeMat=orbMat; core=body;
+  }
+  return{mat,core,base,shards,eyes,eyeMat};
+}
 const TILE=1;
 const canvas=document.getElementById("scene");
 const renderer=new THREE.WebGLRenderer({canvas,antialias:true,alpha:true});
@@ -900,7 +968,7 @@ function loadIsland(idx, resumeGit){
   const group=new THREE.Group(); scene.add(group);
   IS={ data, ROWS, COLS, offX, offZ, tileToWorld, group, tiles:[],
        stations:[], stationViz:[], gateTile:null, guardianTile:null, monumentTile:null, loreTile:null, spawnTile:null,
-       tiers:[], bars:[], gMat:null, gShards:[], gCore:null, gBase:null, shrineFloaters:[],
+       tiers:[], bars:[], gMat:null, gShards:[], gCore:null, gBase:null, gEyes:[], gEyeMat:null, gGroup:null, gBaseY:0, gShape:'', shrineFloaters:[],
        activeStation:0, gateOpen:false, complete:false, monBaseline:git.commitOrder.length };
 
   const WALK=new Set(["floor","spawn","station"]);
@@ -982,18 +1050,17 @@ function loadIsland(idx, resumeGit){
   const gate=new THREE.Group(); gate.position.copy(tileToWorld(IS.gateTile.c,IS.gateTile.r,IS.gateTile.top)); group.add(gate);
   const postMat=new THREE.MeshStandardMaterial({color:C.gate,roughness:.8,flatShading:true});
   [-0.42,0.42].forEach(x=>{const p=new THREE.Mesh(new THREE.BoxGeometry(0.16,1.5,0.16),postMat);p.position.set(x,0.75,0);p.castShadow=true;gate.add(p);});
+  const gspec=GUARDIANS[idx];
   for(let i=0;i<4;i++){const bar=new THREE.Mesh(new THREE.BoxGeometry(0.86,0.1,0.1),
-      new THREE.MeshStandardMaterial({color:C.guardianHi,emissive:C.guardian,emissiveIntensity:.35,roughness:.4}));
+      new THREE.MeshStandardMaterial({color:gHi(gspec.color),emissive:gspec.color,emissiveIntensity:.35,roughness:.4}));
     bar.position.set(0,0.4+i*0.34,0);bar.castShadow=true;gate.add(bar);IS.bars.push(bar);}
 
   // guardian
   const guardian=new THREE.Group(); guardian.position.copy(tileToWorld(IS.guardianTile.c,IS.guardianTile.r,IS.guardianTile.top)); group.add(guardian);
-  const gMat=new THREE.MeshStandardMaterial({color:C.guardianDim,emissive:C.guardian,emissiveIntensity:.06,roughness:.45,flatShading:true});
-  IS.gMat=gMat;
-  IS.gCore=new THREE.Mesh(new THREE.IcosahedronGeometry(0.4,0),gMat);IS.gCore.position.y=0.78;IS.gCore.castShadow=true;guardian.add(IS.gCore);
-  IS.gBase=new THREE.Mesh(new THREE.ConeGeometry(0.42,0.9,6),gMat);IS.gBase.position.y=0.4;IS.gBase.castShadow=true;guardian.add(IS.gBase);
-  for(let i=0;i<5;i++){const s=new THREE.Mesh(new THREE.TetrahedronGeometry(0.16),gMat);const a=(i/5)*Math.PI*2;
-    s.position.set(Math.cos(a)*0.55,0.78+Math.sin(a*2)*0.18,Math.sin(a)*0.55);guardian.add(s);IS.gShards.push(s);}
+  const gb=buildGuardian(gspec.shape,gspec.color,guardian);
+  guardian.scale.setScalar(1.6); guardian.position.y+=0.18;
+  IS.gMat=gb.mat; IS.gCore=gb.core; IS.gBase=gb.base; IS.gShards=gb.shards;
+  IS.gEyes=gb.eyes; IS.gEyeMat=gb.eyeMat; IS.gGroup=guardian; IS.gBaseY=guardian.position.y; IS.gShape=gspec.shape;
 
   // lore stone
   if(IS.loreTile){const stone=new THREE.Mesh(new THREE.DodecahedronGeometry(0.22),new THREE.MeshStandardMaterial({color:C.lore,roughness:.85,flatShading:true}));
@@ -1077,7 +1144,7 @@ function pickTile(x,y){
   raycaster.setFromCamera(ptr,camera);
   const meshes=[]; for(let r=0;r<IS.ROWS;r++)for(let c=0;c<IS.COLS;c++){const m=IS.tiles[r][c].mesh; if(m)meshes.push(m);}
   IS.stationViz.forEach(v=>{ meshes.push(v.crystal, v.ring); });
-  meshes.push(IS.gCore,IS.gBase);
+  if(IS.gCore)meshes.push(IS.gCore); if(IS.gBase)meshes.push(IS.gBase);
   const hit=raycaster.intersectObjects(meshes,false)[0]; if(!hit)return null;
   const ud=hit.object.userData; if(ud&&ud.c!=null)return IS.tiles[ud.r][ud.c]; return IS.guardianTile;
 }
@@ -1112,9 +1179,19 @@ function animate(){
     if(IS.gateOpen){ IS.bars.forEach((bar,i)=>{ bar.position.y+=((2.2+i*0.1)-bar.position.y)*Math.min(1,dt*2.2);
       bar.material.transparent=true; bar.material.opacity=Math.max(0,bar.material.opacity-dt*0.6); }); }
 
-    // guardian
-    IS.gCore.rotation.y+=dt*0.5;IS.gCore.rotation.x+=dt*0.18;
-    IS.gShards.forEach((s,i)=>{const a=time*0.6+i;s.position.y=0.78+Math.sin(a*1.4)*0.16;s.rotation.x+=dt;});
+    // guardian — unified celestial hover + shape-specific idle
+    if(IS.gGroup){IS.gGroup.position.y=IS.gBaseY+Math.sin(time*0.55)*0.08;}
+    if(IS.gShape==="crystal"){
+      if(IS.gCore){IS.gCore.rotation.y+=dt*0.5;IS.gCore.rotation.x+=dt*0.18;}
+      IS.gShards.forEach((s,i)=>{const a=time*0.6+i;s.position.y=0.82+Math.sin(a*1.4)*0.16;s.rotation.x+=dt;});
+    } else if(IS.gShape==="fork"){
+      if(IS.gGroup){IS.gGroup.rotation.y+=dt*0.35;}
+    } else if(IS.gShape==="spire"){
+      if(IS.gGroup){IS.gGroup.rotation.y=Math.sin(time*0.42)*0.18;}
+    } else if(IS.gShape==="envoy"){
+      if(IS.gEyes[0]){IS.gEyes[0].position.x=0.38+Math.cos(time*0.85)*0.09;IS.gEyes[0].position.y=0.88+Math.sin(time*0.85)*0.06;}
+    } else if(IS.gShape==="owl"&&IS.gGroup){IS.gGroup.rotation.y=Math.sin(time*0.38)*0.07;}
+    if(IS.gEyeMat){IS.gEyeMat.emissiveIntensity=0.65+Math.sin(time*2.1)*0.22;}
     const wake=IS.complete?0.9:0.06; IS.gMat.emissiveIntensity+=(wake-IS.gMat.emissiveIntensity)*Math.min(1,dt*2);
 
     const gl=panelOpen?0.7:0; goldLight.intensity+=(gl-goldLight.intensity)*Math.min(1,dt*3);
